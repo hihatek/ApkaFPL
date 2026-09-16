@@ -483,13 +483,15 @@ function transferScore(p){
 // For captaincy: FPL's own epNext model can lag a hot run of form, so give recent form a
 // nudge here — capped, so one fluke big-haul game can't swamp a proven high-EP option —
 // and look only at the very next fixture (captaincy is a one-gameweek call, not a hold).
-// Small positional nudge too: a defender's points are capped by clean-sheet + defensive
-// contribution rules even on a great day, while a forward's ceiling on a great day is much
-// higher — real captaincy calls weigh that, so a marginal defender shouldn't out-rank a
-// genuinely elite forward just because of one big haul.
-const CAPTAIN_POS_ADJUST = {1: -0.3, 2: -0.2, 3: 0, 4: 0.2};
+// Positional weight: a defender's points are capped by clean-sheet + defensive contribution
+// rules even on a great day, while a forward's ceiling is much higher — real captaincy calls
+// weigh that. This is multiplicative (not a flat offset) so it still matters even when a
+// defender's own ep_next has been pulled unusually high by one big haul, not just when
+// scores are already close.
+const CAPTAIN_POS_WEIGHT = {1: 0.82, 2: 0.85, 3: 1.0, 4: 1.08};
 function captainScore(p){
-  return p.epNext + Math.min(p.form,8)*0.15 - (fixtureAvgDifficulty(p.teamId,1) - 3) * 0.2 + CAPTAIN_POS_ADJUST[p.pos];
+  const base = p.epNext + Math.min(p.form,8)*0.15 - (fixtureAvgDifficulty(p.teamId,1) - 3) * 0.2;
+  return base * CAPTAIN_POS_WEIGHT[p.pos];
 }
 // For Top Picks by Position: like transferScore, but also factors in recent form
 // (capped, same reasoning as captainScore) — a player on a real cold streak shouldn't
