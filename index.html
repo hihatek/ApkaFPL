@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1B4332">
+<title>FPL Cockpit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F5F1;
+    --ink:#12181B;
+    --ink-soft:#5B6560;
+    --pitch:#1B4332;
+    --pitch-light:#2D6A4F;
+    --amber:#E8A33D;
+    --hard:#C4463A;
+    --medium:#D98F3A;
+    --easy:#2F7A73;
+    --line:#E4E1D8;
+    --card:#FFFFFF;
+    --gkp:#B08900;
+    --def:#2F7A73;
+    --mid:#1B4332;
+    --fwd:#C4463A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:#DCD9CE;
+    color:var(--ink);
+  }
+  .phone{
+    max-width:460px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--bg);
+    position:relative;
+    box-shadow:0 0 40px rgba(0,0,0,.15);
+    padding-bottom:calc(64px + env(safe-area-inset-bottom));
+  }
+  h1,h2,h3{font-family:'Barlow Condensed',sans-serif;margin:0;}
+
+  /* ---------- App bar ---------- */
+  .appbar{
+    position:sticky; top:0; z-index:20;
+    background:var(--pitch);
+    color:#fff;
+    padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .gw-pill{
+    background:var(--amber); color:var(--pitch);
+    font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:13px;
+    padding:4px 10px; border-radius:999px; white-space:nowrap;
+  }
+  .deadline{
+    flex:1; font-size:13px; color:#DDE7E0;
+    display:flex; flex-direction:column; line-height:1.2;
+  }
+  .deadline .val{font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums;}
+  .icon-btn{
+    background:rgba(255,255,255,.14); border:none; color:#fff;
+    width:34px; height:34px; border-radius:9px; font-size:16px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+
+  /* ---------- Generic ---------- */
+  #status{padding:16px 14px; font-size:13px; color:var(--ink-soft);}
+  button{font-family:'Inter',sans-serif; cursor:pointer;}
+  .btn{
+    background:var(--pitch); color:#fff; border:none; padding:9px 14px;
+    border-radius:9px; font-size:13px; font-weight:600;
+  }
+  .btn.ghost{background:transparent; color:var(--pitch); border:1px solid var(--pitch);}
+
+  /* ---------- Manual paste panel ---------- */
+  .manual-panel{ margin:14px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .manual-panel h3{color:var(--pitch); font-size:19px; margin-bottom:6px;}
+  .manual-panel p{font-size:12.5px; line-height:1.55; color:var(--ink-soft);}
+  .manual-panel ol{font-size:12.5px; line-height:1.6; margin:8px 0 12px 18px; padding:0;}
+  .link-btn{
+    display:inline-block; background:#EFECE3; border:1px solid var(--line); color:var(--pitch);
+    text-decoration:none; font-weight:600; font-size:12px; padding:6px 10px; border-radius:8px; margin:4px 6px 0 0;
+  }
+  .manual-panel label{font-size:12px; font-weight:600; color:var(--ink-soft); display:block; margin:10px 0 4px;}
+  .manual-panel textarea{
+    width:100%; height:90px; font-family:monospace; font-size:11px;
+    border:1px solid var(--line); border-radius:8px; padding:8px; resize:vertical;
+  }
+  .manual-actions{margin-top:10px; display:flex; flex-wrap:wrap; align-items:center; gap:10px;}
+  .manual-msg{font-size:12px; color:var(--hard);}
+
+  /* ---------- Tabs content ---------- */
+  main{display:none;}
+  .tab-panel{display:none; padding:14px;}
+  .tab-panel.active{display:block;}
+
+  /* ---------- Picks tab ---------- */
+  .pick-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px 6px; margin-bottom:12px;}
+  .pick-card h3{font-size:18px; color:var(--pitch);}
+  .pick-card .sub{font-size:11px; color:var(--ink-soft); margin-bottom:8px;}
+  .pick-row{display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--line); font-size:13.5px;}
+  .pick-row:first-of-type{border-top:none;}
+  .pick-row .nm{font-weight:600;}
+  .pick-row .mt{color:var(--ink-soft); font-size:11px;}
+  .pick-row .st{font-family:'Barlow Condensed',sans-serif; font-weight:700; color:var(--pitch); font-size:17px;}
+  .fixture-row{padding:8px 0; border-top:1px solid var(--line);}
+  .fixture-row:first-child{border-top:none; padding-top:0;}
+  .fixture-row .fx-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;}
+  .fixture-row .fx-top .nm{font-weight:600; font-size:13.5px;}
+  .fixture-row .fx-top .st{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; color:var(--pitch);}
+
+  /* ---------- Players tab ---------- */
+  .search-row{display:flex; gap:8px; margin-bottom:12px;}
+  .search-row input{
+    flex:1; border:1px solid var(--line); border-radius:9px; padding:9px 12px;
+    font-size:14px; background:#fff;
+  }
+  .filter-btn{
+    background:var(--card); border:1px solid var(--line); border-radius:9px;
+    padding:9px 12px; font-size:13px; font-weight:600; color:var(--pitch); white-space:nowrap;
+  }
+  .filter-btn.has-filters{background:var(--pitch); color:#fff; border-color:var(--pitch);}
+  .result-count{font-size:11.5px; color:var(--ink-soft); margin:-4px 0 10px;}
+
+  .p-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:10px;}
+  .p-top{display:flex; align-items:center; gap:8px;}
+  .pos-badge{
+    font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:10.5px; color:#fff;
+    padding:2px 7px; border-radius:5px; letter-spacing:.02em; flex-shrink:0;
+  }
+  .p-name{flex:1; font-weight:700; font-size:15px; display:flex; align-items:center; gap:5px;}
+  .p-price{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; color:var(--pitch);}
+  .p-team{font-size:11.5px; color:var(--ink-soft); margin:2px 0 10px 0;}
+  .flag{width:7px; height:7px; border-radius:50%; display:inline-block; flex-shrink:0;}
+  .p-stats{display:flex; justify-content:space-between; margin-bottom:10px;}
+  .p-stats .stat{text-align:center; flex:1;}
+  .p-stats .stat .v{display:block; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; color:var(--ink);}
+  .p-stats .stat .l{display:block; font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-top:1px;}
+  .fx-row{display:flex; gap:4px; overflow-x:auto; padding-bottom:2px;}
+  .fx-chip{
+    font-size:10px; font-weight:700; color:#fff; border-radius:5px; padding:4px 6px;
+    font-family:'Barlow Condensed',sans-serif; min-width:38px; text-align:center; flex-shrink:0;
+  }
+
+  /* ---------- Bottom tab bar ---------- */
+  .bottom-tabs{
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
+    max-width:460px; margin:0 auto;
+    background:var(--card); border-top:1px solid var(--line);
+    display:flex; padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tab-btn{
+    flex:1; background:none; border:none; padding:11px 0 9px; font-size:12.5px; font-weight:600;
+    color:var(--ink-soft); display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .tab-btn .dot{width:5px; height:5px; border-radius:50%; background:transparent;}
+  .tab-btn.active{color:var(--pitch);}
+  .tab-btn.active .dot{background:var(--amber);}
+
+  /* ---------- Filter sheet ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:40;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+  }
+  .overlay.open{opacity:1; pointer-events:auto;}
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    max-width:460px; margin:0 auto;
+    background:var(--card); border-radius:18px 18px 0 0;
+    padding:16px 18px calc(20px + env(safe-area-inset-bottom));
+    transform:translateY(100%); transition:transform .25s ease;
+    max-height:80vh; overflow-y:auto;
+  }
+  .sheet.open{transform:translateY(0);}
+  .sheet h3{font-size:19px; color:var(--pitch); margin-bottom:12px;}
+  .sheet .grip{width:36px; height:4px; background:var(--line); border-radius:2px; margin:0 auto 14px;}
+  .sheet label{font-size:11.5px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; display:block; margin:14px 0 8px;}
+  .sheet label:first-of-type{margin-top:0;}
+  .pill-row{display:flex; gap:7px; flex-wrap:wrap;}
+  .pill{
+    background:#F1EFE7; border:1px solid var(--line); color:var(--ink);
+    padding:7px 13px; border-radius:999px; font-size:13px; font-weight:600;
+  }
+  .pill.active{background:var(--pitch); color:#fff; border-color:var(--pitch);}
+  .sheet select, .sheet input[type=number]{
+    width:100%; border:1px solid var(--line); border-radius:9px; padding:9px 12px; font-size:14px; background:#fff;
+  }
+  .check-row{display:flex; align-items:center; gap:8px; margin-top:14px; font-size:13.5px;}
+  .sheet-actions{margin-top:18px;}
+  .sheet-actions .btn{width:100%; padding:12px; font-size:14px;}
+
+  footer{padding:16px; font-size:11px; color:var(--ink-soft); line-height:1.6;}
+
+  /* ---------- My Team tab ---------- */
+  .setup-box{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px;}
+  .setup-box h3{color:var(--pitch); font-size:19px; margin-bottom:6px;}
+  .setup-box p{font-size:12.5px; line-height:1.55; color:var(--ink-soft);}
+  .setup-box ol{font-size:12.5px; line-height:1.6; margin:8px 0 12px 18px; padding:0;}
+  .setup-box label{font-size:12px; font-weight:600; color:var(--ink-soft); display:block; margin:12px 0 4px;}
+  .setup-box textarea{width:100%; height:90px; font-family:monospace; font-size:11px; border:1px solid var(--line); border-radius:8px; padding:8px; resize:vertical;}
+  .setup-msg{font-size:12px; color:var(--hard); margin-top:8px;}
+
+  .url-box{display:flex; gap:8px; margin:10px 0;}
+  .url-box input{
+    flex:1; min-width:0; border:1px solid var(--line); border-radius:8px; padding:9px 10px;
+    font-family:monospace; font-size:11.5px; background:#F1EFE7; color:var(--ink);
+  }
+  .url-box button{
+    flex-shrink:0; background:var(--pitch); color:#fff; border:none; border-radius:8px;
+    padding:0 14px; font-size:13px; font-weight:600;
+  }
+  .url-box button.copied{background:var(--easy);}
+  .url-hint{font-size:11.5px; color:var(--ink-soft); margin:-4px 0 4px;}
+
+  .team-header{background:var(--pitch); color:#fff; border-radius:14px; padding:16px; margin-bottom:12px;}
+  .team-header .tname{font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700;}
+  .team-header .mname{font-size:12.5px; color:#C8D6CD; margin-bottom:10px;}
+  .team-stats{display:flex; gap:8px;}
+  .team-stats .ts{flex:1; background:rgba(255,255,255,.12); border-radius:9px; padding:8px 6px; text-align:center;}
+  .team-stats .ts .v{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:16px;}
+  .team-stats .ts .l{font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:#C8D6CD; margin-top:1px;}
+
+  .squad-section-title{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.06em; margin:16px 0 8px;}
+  .squad-card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; gap:10px;}
+  .squad-card.benched{opacity:.68;}
+  .squad-card .pos-badge{flex-shrink:0;}
+  .squad-card .sq-mid{flex:1; min-width:0;}
+  .squad-card .sq-name{font-weight:700; font-size:14px; display:flex; align-items:center; gap:5px;}
+  .squad-card .sq-meta{font-size:11px; color:var(--ink-soft);}
+  .chip-badge{
+    font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:10px; color:#fff;
+    background:var(--amber); border-radius:4px; padding:1px 5px; flex-shrink:0;
+  }
+  .chip-badge.vc{background:var(--ink-soft);}
+  .squad-card .sq-right{text-align:right; flex-shrink:0;}
+  .squad-card .sq-price{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px;}
+  .squad-card .sq-ep{font-size:11px; color:var(--ink-soft);}
+
+  .analysis-card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px;}
+  .analysis-card h4{font-family:'Barlow Condensed',sans-serif; font-size:16px; color:var(--pitch); margin-bottom:6px;}
+  .analysis-card p{font-size:12.5px; line-height:1.55; color:var(--ink); margin:4px 0;}
+  .analysis-card.good{border-left:3px solid var(--easy);}
+  .analysis-card.warn{border-left:3px solid var(--hard);}
+  .reload-link{font-size:12px; color:var(--pitch); text-decoration:underline; background:none; border:none; padding:0; margin-top:14px; display:inline-block;}
+
+  /* ---------- Squad builder ---------- */
+  .builder-row{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px;
+    display:flex; align-items:center; gap:10px; cursor:pointer;
+  }
+  .builder-row.selected{border-color:var(--pitch); background:#F0F5F1;}
+  .builder-row .b-mid{flex:1; min-width:0;}
+  .builder-row .b-name{font-weight:700; font-size:14px;}
+  .builder-row .b-meta{font-size:11px; color:var(--ink-soft);}
+  .builder-row .b-price{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; flex-shrink:0;}
+  .b-check{
+    width:22px; height:22px; border-radius:50%; border:2px solid var(--line); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:13px; color:#fff; font-weight:700;
+  }
+  .builder-row.selected .b-check{background:var(--pitch); border-color:var(--pitch);}
+  .sticky-bar{
+    position:sticky; bottom:0; background:var(--bg); padding:10px 0 4px; margin-top:6px;
+    border-top:1px solid var(--line);
+  }
+  .arrange-row{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .arrange-row.is-bench{opacity:.6;}
+  .arrange-row .a-mid{flex:1; min-width:0;}
+  .arrange-row .a-name{font-weight:700; font-size:13.5px;}
+  .arrange-row .a-meta{font-size:10.5px; color:var(--ink-soft);}
+  .mini-btn{
+    flex-shrink:0; border:1px solid var(--line); background:#fff; color:var(--ink-soft);
+    font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:11px;
+    width:30px; height:30px; border-radius:8px;
+  }
+  .mini-btn.active-c{background:var(--amber); color:#fff; border-color:var(--amber);}
+  .mini-btn.active-v{background:var(--ink-soft); color:#fff; border-color:var(--ink-soft);}
+  .mini-btn.active-bench{background:var(--pitch); color:#fff; border-color:var(--pitch);}
+  .builder-empty{text-align:center; padding:50px 20px; color:var(--ink-soft); font-size:13px;}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="appbar">
+    <div class="gw-pill" id="gwBadge">GW —</div>
+    <span id="liveBadge" style="display:none; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:10px; letter-spacing:.05em; padding:3px 7px; border-radius:5px; background:rgba(255,255,255,.18); color:#fff;"></span>
+    <div class="deadline">
+      <span>Deadline</span>
+      <span class="val" id="clockVal">--:--:--:--</span>
+    </div>
+  </div>
+  <div id="liveStatusBanner" style="display:none; background:#FBEAE8; color:#7A2A22; font-size:11.5px; line-height:1.5; padding:9px 14px; text-align:center;"></div>
+
+  <main id="app" style="display:block;">
+    <section class="tab-panel active" id="picksTab">
+      <div class="pick-card">
+        <h3>Captain Picks</h3>
+        <div class="sub">Top expected points, next GW</div>
+        <div id="captainList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Top Picks by Position</h3>
+        <div class="sub">Expected points, recent form &amp; upcoming fixtures</div>
+        <div style="font-size:11px; font-weight:700; color:var(--gkp); text-transform:uppercase; letter-spacing:.05em; margin:8px 0 4px;">Goalkeepers</div>
+        <div id="topGkpList"></div>
+        <div style="font-size:11px; font-weight:700; color:var(--def); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 4px;">Defenders</div>
+        <div id="topDefList"></div>
+        <div style="font-size:11px; font-weight:700; color:var(--mid); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 4px;">Midfielders</div>
+        <div id="topMidList"></div>
+        <div style="font-size:11px; font-weight:700; color:var(--fwd); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 4px;">Forwards</div>
+        <div id="topFwdList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Best Value</h3>
+        <div class="sub">Points per &pound;m, proven scorers</div>
+        <div id="valueList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Differentials</h3>
+        <div class="sub">&lt;10% owned, ranked by form &amp; fixtures</div>
+        <div id="diffList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Fixture Swings</h3>
+        <div class="sub">Next 5 gameweeks, avg difficulty (lower = easier)</div>
+        <div style="font-size:11px; font-weight:700; color:var(--easy); text-transform:uppercase; letter-spacing:.05em; margin:8px 0 4px;">Kindest run</div>
+        <div id="fixtureBestList"></div>
+        <div style="font-size:11px; font-weight:700; color:var(--hard); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 4px;">Toughest run</div>
+        <div id="fixtureWorstList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Watch List</h3>
+        <div class="sub">Highly owned, fitness doubt</div>
+        <div id="watchList"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="playersTab">
+      <div class="search-row">
+        <input type="text" id="search" placeholder="Search player&hellip;">
+        <button class="filter-btn" id="filterBtn">Filters</button>
+      </div>
+      <div class="result-count" id="resultCount"></div>
+      <div id="playerList"></div>
+    </section>
+
+    <section class="tab-panel" id="myTeamTab">
+      <div id="teamView" style="display:none;"></div>
+
+      <div id="builderStep1" style="display:none;">
+        <div class="search-row">
+          <input type="text" id="builderSearch" placeholder="Search player&hellip;">
+        </div>
+        <div class="result-count" id="builderCount">0 / 15 selected</div>
+        <div id="builderList"></div>
+        <div class="sticky-bar">
+          <button class="btn" id="builderNextBtn" style="width:100%;" disabled>Continue</button>
+        </div>
+      </div>
+
+      <div id="builderStep2" style="display:none;">
+        <p style="font-size:12px; color:var(--ink-soft); line-height:1.5; margin:4px 0 12px;">Tap <strong>B</strong> to bench a player (max 4, first bench slot must be a keeper), <strong>C</strong> for captain, <strong>V</strong> for vice-captain.</p>
+        <div id="arrangeList"></div>
+        <div class="sticky-bar">
+          <button class="btn" id="saveSquadBtn" style="width:100%;">Save Squad</button>
+          <div class="setup-msg" id="arrangeMsg" style="text-align:center; margin-top:6px;"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer id="footerNote">
+    Data baked into this file directly &mdash; no live fetching, no CORS, nothing to paste. Sourced from a community FPL mirror on GitHub (matches the official API). Unofficial personal tool.
+    <div id="updatedAt" style="margin-top:4px;"></div>
+  </footer>
+
+  <nav class="bottom-tabs" id="bottomTabs" style="display:flex;">
+    <button class="tab-btn active" data-tab="picksTab"><span class="dot"></span>Picks</button>
+    <button class="tab-btn" data-tab="playersTab"><span class="dot"></span>Players</button>
+    <button class="tab-btn" data-tab="myTeamTab"><span class="dot"></span>My Team</button>
+  </nav>
+
+  <div class="overlay" id="sheetOverlay"></div>
+  <div class="sheet" id="filterSheet">
+    <div class="grip"></div>
+    <h3>Filters &amp; Sort</h3>
+
+    <label>Position</label>
+    <div class="pill-row" id="posPills">
+      <button class="pill active" data-pos="0">All</button>
+      <button class="pill" data-pos="1">GKP</button>
+      <button class="pill" data-pos="2">DEF</button>
+      <button class="pill" data-pos="3">MID</button>
+      <button class="pill" data-pos="4">FWD</button>
+    </div>
+
+    <label>Team</label>
+    <select id="teamSelect"><option value="0">All Teams</option></select>
+
+    <label>Max price (&pound;m)</label>
+    <input type="number" id="maxPrice" step="0.5" placeholder="e.g. 8.5">
+
+    <label>Sort by</label>
+    <select id="sortSelect">
+      <option value="ep_next">Expected Points (next GW)</option>
+      <option value="form">Form</option>
+      <option value="total_points">Total Points</option>
+      <option value="ppg">Points / Game</option>
+      <option value="value">Value (pts per &pound;m)</option>
+      <option value="now_cost">Price</option>
+      <option value="selected_by_percent">Ownership</option>
+    </select>
+
+    <div class="pill-row" style="margin-top:8px;">
+      <button class="pill active" id="dirDesc">&darr; High to low</button>
+      <button class="pill" id="dirAsc">&uarr; Low to high</button>
+    </div>
+
+    <div class="check-row">
+      <input type="checkbox" id="hideUnavailable" checked>
+      <label style="margin:0; text-transform:none; font-weight:500; font-size:13.5px; color:var(--ink);">Hide unavailable players</label>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn" id="doneFilterBtn">Done</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const POS_COLOR = {1:'var(--gkp)',2:'var(--def)',3:'var(--mid)',4:'var(--fwd)'};
+const POS_NAME = {1:'GKP',2:'DEF',3:'MID',4:'FWD'};
+
+// ---- Data baked in at build time (no fetch, no CORS, nothing to paste) ----
+const TEAM_ID = 2433979;
+// Squad read from the user's FPL app screenshot. Update by sending a new screenshot.
+const MY_TEAM_PICKS = [
+  { element: 109, position: 1,  is_captain: false, is_vice_captain: false }, // Verbruggen (GKP)
+  { element: 391, position: 2,  is_captain: false, is_vice_captain: false }, // Gvardiol (DEF)
+  { element: 8,   position: 3,  is_captain: false, is_vice_captain: false }, // Calafiori (DEF)
+  { element: 31,  position: 4,  is_captain: false, is_vice_captain: false }, // Konsa (DEF)
+  { element: 40,  position: 5,  is_captain: false, is_vice_captain: false }, // Rogers (MID)
+  { element: 426, position: 6,  is_captain: false, is_vice_captain: true  }, // B.Fernandes (MID) - VC
+  { element: 399, position: 7,  is_captain: false, is_vice_captain: false }, // Cherki (MID)
+  { element: 557, position: 8,  is_captain: false, is_vice_captain: false }, // Tzolis (MID)
+  { element: 411, position: 9,  is_captain: true,  is_vice_captain: false }, // Haaland (FWD) - C
+  { element: 165, position: 10, is_captain: false, is_vice_captain: false }, // João Pedro (FWD)
+  { element: 346, position: 11, is_captain: false, is_vice_captain: false }, // Calvert-Lewin (FWD)
+  { element: 111, position: 12, is_captain: false, is_vice_captain: false }, // Steele (bench GKP)
+  { element: 605, position: 13, is_captain: false, is_vice_captain: false }, // Yalcouyé (bench MID)
+  { element: 423, position: 14, is_captain: false, is_vice_captain: false }, // Shaw (bench DEF)
+  { element: 277, position: 15, is_captain: false, is_vice_captain: false }  // Egan (bench DEF)
+];
+const FPL_DATA = {"generatedAt":"2026-08-28T16:40:33Z","eventDeadlines":{"1":"2026-08-21T17:30:00Z","2":"2026-08-28T17:30:00Z","3":"2026-09-04T17:30:00Z","4":"2026-09-12T12:30:00Z","5":"2026-09-18T17:30:00Z","6":"2026-10-10T10:00:00Z","7":"2026-10-17T10:00:00Z","8":"2026-10-23T17:30:00Z","9":"2026-10-31T11:00:00Z","10":"2026-11-07T13:30:00Z","11":"2026-11-21T13:30:00Z","12":"2026-11-28T13:30:00Z","13":"2026-12-02T18:30:00Z","14":"2026-12-05T13:30:00Z","15":"2026-12-12T13:30:00Z","16":"2026-12-19T13:30:00Z","17":"2026-12-26T13:30:00Z","18":"2026-12-30T18:30:00Z","19":"2027-01-02T13:30:00Z","20":"2027-01-06T18:30:00Z","21":"2027-01-16T13:30:00Z","22":"2027-01-23T13:30:00Z","23":"2027-01-30T13:30:00Z","24":"2027-02-06T13:30:00Z","25":"2027-02-10T18:30:00Z","26":"2027-02-20T13:30:00Z","27":"2027-02-27T13:30:00Z","28":"2027-03-03T18:30:00Z","29":"2027-03-13T13:30:00Z","30":"2027-03-20T13:30:00Z","31":"2027-04-10T12:30:00Z","32":"2027-04-17T12:30:00Z","33":"2027-04-24T12:30:00Z","34":"2027-05-01T12:30:00Z","35":"2027-05-08T12:30:00Z","36":"2027-05-15T12:30:00Z","37":"2027-05-23T12:30:00Z","38":"2027-05-30T13:30:00Z"},"teams":{"1":{"name":"Arsenal","short_name":"ARS"},"2":{"name":"Aston Villa","short_name":"AVL"},"3":{"name":"Bournemouth","short_name":"BOU"},"4":{"name":"Brentford","short_name":"BRE"},"5":{"name":"Brighton","short_name":"BHA"},"6":{"name":"Chelsea","short_name":"CHE"},"7":{"name":"Coventry City","short_name":"COV"},"8":{"name":"Crystal Palace","short_name":"CRY"},"9":{"name":"Everton","short_name":"EVE"},"10":{"name":"Fulham","short_name":"FUL"},"11":{"name":"Hull City","short_name":"HUL"},"12":{"name":"Ipswich Town","short_name":"IPS"},"13":{"name":"Leeds","short_name":"LEE"},"14":{"name":"Liverpool","short_name":"LIV"},"15":{"name":"Man City","short_name":"MCI"},"16":{"name":"Man Utd","short_name":"MUN"},"17":{"name":"Newcastle","short_name":"NEW"},"18":{"name":"Nott'm Forest","short_name":"NFO"},"19":{"name":"Spurs","short_name":"TOT"},"20":{"name":"Sunderland","short_name":"SUN"}},"players":[{"id":1,"name":"Raya","team":1,"pos":1,"cost":60,"form":6.0,"totalPts":6,"ppg":6.0,"selected":38.3,"epNext":4.0,"status":"a","chance":null},{"id":2,"name":"Arrizabalaga","team":1,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.6,"status":"a","chance":null},{"id":3,"name":"Meslier","team":1,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.6,"status":"a","chance":null},{"id":4,"name":"Gabriel","team":1,"pos":2,"cost":80,"form":5.0,"totalPts":5,"ppg":5.0,"selected":29.2,"epNext":4.0,"status":"a","chance":null},{"id":5,"name":"J.Timber","team":1,"pos":2,"cost":65,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":6,"name":"Saliba","team":1,"pos":2,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":0.0,"status":"i","chance":0},{"id":7,"name":"Lewis-Skelly","team":1,"pos":3,"cost":55,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.7,"epNext":2.0,"status":"a","chance":null},{"id":8,"name":"Calafiori","team":1,"pos":2,"cost":56,"form":9.0,"totalPts":9,"ppg":9.0,"selected":41.6,"epNext":2.6,"status":"a","chance":null},{"id":9,"name":"Hincapie","team":1,"pos":2,"cost":54,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.5,"epNext":2.4,"status":"a","chance":null},{"id":10,"name":"White","team":1,"pos":2,"cost":55,"form":11.0,"totalPts":11,"ppg":11.0,"selected":6.6,"epNext":2.5,"status":"a","chance":100},{"id":11,"name":"Mosquera","team":1,"pos":2,"cost":55,"form":6.0,"totalPts":6,"ppg":6.0,"selected":5.8,"epNext":2.5,"status":"a","chance":null},{"id":12,"name":"Saka","team":1,"pos":3,"cost":95,"form":9.0,"totalPts":9,"ppg":9.0,"selected":10.4,"epNext":3.2,"status":"a","chance":null},{"id":13,"name":"Rice","team":1,"pos":3,"cost":75,"form":3.0,"totalPts":3,"ppg":3.0,"selected":17.0,"epNext":2.6,"status":"a","chance":null},{"id":14,"name":"Eze","team":1,"pos":3,"cost":65,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.8,"epNext":2.3,"status":"a","chance":null},{"id":15,"name":"\u00d8degaard","team":1,"pos":3,"cost":66,"form":11.0,"totalPts":11,"ppg":11.0,"selected":11.5,"epNext":2.3,"status":"a","chance":null},{"id":16,"name":"Madueke","team":1,"pos":3,"cost":64,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.3,"epNext":2.3,"status":"a","chance":null},{"id":17,"name":"Merino","team":1,"pos":3,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.6,"epNext":2.2,"status":"a","chance":null},{"id":18,"name":"Martinelli","team":1,"pos":3,"cost":64,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.3,"status":"a","chance":null},{"id":19,"name":"Zubimendi","team":1,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.0,"epNext":2.0,"status":"a","chance":null},{"id":20,"name":"Dowman","team":1,"pos":3,"cost":54,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.9,"status":"a","chance":null},{"id":22,"name":"Nwaneri","team":1,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.0,"status":"a","chance":null},{"id":23,"name":"F\u00e1bio Vieira","team":1,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.0,"status":"a","chance":null},{"id":24,"name":"Nelson","team":1,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.0,"status":"a","chance":null},{"id":25,"name":"Gy\u00f6keres","team":1,"pos":4,"cost":74,"form":0.0,"totalPts":0,"ppg":0.0,"selected":6.9,"epNext":2.3,"status":"a","chance":null},{"id":26,"name":"Havertz","team":1,"pos":4,"cost":75,"form":6.0,"totalPts":6,"ppg":6.0,"selected":7.4,"epNext":2.4,"status":"a","chance":null},{"id":27,"name":"G.Jesus","team":1,"pos":4,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":2.0,"status":"a","chance":null},{"id":31,"name":"Konsa","team":1,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":10.9,"epNext":1.7,"status":"a","chance":null},{"id":452,"name":"Bruno G.","team":1,"pos":3,"cost":69,"form":0.0,"totalPts":0,"ppg":0.0,"selected":2.8,"epNext":1.8,"status":"d","chance":75},{"id":557,"name":"Tzolis","team":1,"pos":3,"cost":65,"form":6.0,"totalPts":6,"ppg":6.0,"selected":26.0,"epNext":2.3,"status":"a","chance":null},{"id":28,"name":"Martinez","team":2,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":4.1,"epNext":2.6,"status":"a","chance":null},{"id":29,"name":"M.Bizot","team":2,"pos":1,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.9,"status":"a","chance":null},{"id":30,"name":"Digne","team":2,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":32,"name":"Cash","team":2,"pos":2,"cost":45,"form":-1.0,"totalPts":-1,"ppg":-1.0,"selected":7.7,"epNext":1.7,"status":"a","chance":null},{"id":33,"name":"Mings","team":2,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.4,"epNext":1.7,"status":"a","chance":null},{"id":34,"name":"Pau","team":2,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.4,"epNext":1.7,"status":"a","chance":null},{"id":35,"name":"Bogarde","team":2,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":36,"name":"Maatsen","team":2,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.7,"epNext":1.7,"status":"a","chance":null},{"id":37,"name":"Lindel\u00f6f","team":2,"pos":2,"cost":45,"form":-2.0,"totalPts":-2,"ppg":-2.0,"selected":0.3,"epNext":1.7,"status":"a","chance":null},{"id":38,"name":"A.Garc\u00eda","team":2,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.7,"epNext":1.0,"status":"a","chance":null},{"id":39,"name":"Nedeljkovic","team":2,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"u","chance":0},{"id":41,"name":"Buend\u00eda","team":2,"pos":3,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.2,"epNext":2.2,"status":"a","chance":null},{"id":44,"name":"Bailey","team":2,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":45,"name":"McGinn","team":2,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":2.8,"epNext":2.0,"status":"a","chance":null},{"id":46,"name":"Barkley","team":2,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":47,"name":"Kamara","team":2,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.3,"epNext":1.5,"status":"a","chance":100},{"id":48,"name":"Onana","team":2,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":49,"name":"Iling Jr","team":2,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":50,"name":"Burrowes","team":2,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.7,"epNext":1.0,"status":"a","chance":null},{"id":51,"name":"George Hemmings","team":2,"pos":3,"cost":45,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.7,"epNext":1.0,"status":"a","chance":null},{"id":52,"name":"Alysson","team":2,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":53,"name":"Manzambi","team":2,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"i","chance":0},{"id":54,"name":"Gomes","team":2,"pos":3,"cost":55,"form":-2.0,"totalPts":-2,"ppg":-2.0,"selected":0.1,"epNext":0.0,"status":"s","chance":0},{"id":55,"name":"Watkins","team":2,"pos":4,"cost":79,"form":0.0,"totalPts":0,"ppg":0.0,"selected":8.0,"epNext":2.4,"status":"a","chance":null},{"id":56,"name":"Abraham","team":2,"pos":4,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.3,"status":"d","chance":75},{"id":160,"name":"Garnacho","team":2,"pos":3,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.6,"epNext":2.2,"status":"a","chance":null},{"id":582,"name":"Madjo","team":2,"pos":4,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.4,"epNext":0.0,"status":"i","chance":0},{"id":596,"name":"Ruggeri","team":2,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.7,"status":"a","chance":null},{"id":597,"name":"Suzuki","team":2,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.8,"epNext":2.6,"status":"a","chance":null},{"id":606,"name":"Rowe","team":2,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":607,"name":"Lynch","team":2,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":611,"name":"Wan-Bissaka","team":2,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":57,"name":"Petrovi\u0107","team":3,"pos":1,"cost":45,"form":2.0,"totalPts":2,"ppg":2.0,"selected":3.3,"epNext":1.9,"status":"a","chance":null},{"id":58,"name":"Forster","team":3,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":3.2,"epNext":1.0,"status":"a","chance":null},{"id":59,"name":"Dennis","team":3,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"u","chance":0},{"id":60,"name":"Hill","team":3,"pos":2,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.9,"epNext":2.5,"status":"a","chance":null},{"id":61,"name":"Truffert","team":3,"pos":2,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":4.2,"epNext":2.5,"status":"a","chance":null},{"id":62,"name":"Diakit\u00e9","team":3,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.2,"status":"a","chance":null},{"id":63,"name":"Milosavljevi\u0107","team":3,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":64,"name":"Smith","team":3,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.7,"status":"a","chance":null},{"id":65,"name":"J.Araujo","team":3,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":66,"name":"Soler","team":3,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.8,"status":"d","chance":75},{"id":67,"name":"Rayan","team":3,"pos":3,"cost":65,"form":2.0,"totalPts":2,"ppg":2.0,"selected":2.8,"epNext":2.3,"status":"a","chance":null},{"id":68,"name":"Tavernier","team":3,"pos":3,"cost":60,"form":10.0,"totalPts":10,"ppg":10.0,"selected":2.3,"epNext":2.2,"status":"a","chance":null},{"id":69,"name":"Scott","team":3,"pos":3,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.5,"epNext":2.2,"status":"a","chance":null},{"id":70,"name":"Kluivert","team":3,"pos":3,"cost":60,"form":3.0,"totalPts":3,"ppg":3.0,"selected":1.2,"epNext":2.2,"status":"a","chance":null},{"id":71,"name":"Cook","team":3,"pos":3,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":72,"name":"Gannon-Doak","team":3,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":73,"name":"Adams","team":3,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":1.5,"status":"a","chance":100},{"id":74,"name":"Brooks","team":3,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":100},{"id":75,"name":"Christie","team":3,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":100},{"id":76,"name":"T\u00f3th.A","team":3,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":77,"name":"Adli","team":3,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":78,"name":"Kroupi.Jr","team":3,"pos":3,"cost":75,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":0.0,"status":"i","chance":0},{"id":79,"name":"Evanilson","team":3,"pos":4,"cost":60,"form":4.0,"totalPts":4,"ppg":4.0,"selected":2.9,"epNext":2.0,"status":"a","chance":null},{"id":80,"name":"Enes \u00dcnal","team":3,"pos":4,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":81,"name":"Rodr\u00edguez","team":3,"pos":4,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.0,"status":"a","chance":100},{"id":566,"name":"Silva","team":3,"pos":2,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.4,"epNext":2.2,"status":"a","chance":null},{"id":573,"name":"Sanchez","team":3,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.7,"status":"a","chance":null},{"id":608,"name":"Jebbison","team":3,"pos":4,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":1.4,"status":"a","chance":null},{"id":615,"name":"Di Gregorio","team":3,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.9,"status":"a","chance":null},{"id":82,"name":"Kelleher","team":4,"pos":1,"cost":50,"form":7.0,"totalPts":7,"ppg":7.0,"selected":6.5,"epNext":2.6,"status":"a","chance":null},{"id":83,"name":"Valdimarsson","team":4,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.9,"status":"a","chance":null},{"id":84,"name":"Collins","team":4,"pos":2,"cost":55,"form":6.0,"totalPts":6,"ppg":6.0,"selected":2.1,"epNext":2.5,"status":"a","chance":null},{"id":85,"name":"Van den Berg","team":4,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":86,"name":"Lewis-Potter","team":4,"pos":3,"cost":55,"form":10.0,"totalPts":10,"ppg":10.0,"selected":1.0,"epNext":2.0,"status":"a","chance":null},{"id":87,"name":"Ajer","team":4,"pos":2,"cost":45,"form":8.0,"totalPts":8,"ppg":8.0,"selected":4.0,"epNext":1.7,"status":"a","chance":null},{"id":88,"name":"Kayode","team":4,"pos":2,"cost":46,"form":13.0,"totalPts":13,"ppg":13.0,"selected":7.4,"epNext":1.9,"status":"a","chance":null},{"id":89,"name":"Henry","team":4,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.7,"status":"a","chance":null},{"id":90,"name":"Hickey","team":4,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.7,"status":"a","chance":null},{"id":91,"name":"Pinnock","team":4,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.7,"status":"a","chance":null},{"id":92,"name":"Ji-soo","team":4,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":93,"name":"Schuster","team":4,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.7,"status":"a","chance":null},{"id":94,"name":"Schade","team":4,"pos":3,"cost":60,"form":3.0,"totalPts":3,"ppg":3.0,"selected":3.5,"epNext":2.2,"status":"a","chance":null},{"id":95,"name":"O.Dango","team":4,"pos":3,"cost":65,"form":3.0,"totalPts":3,"ppg":3.0,"selected":1.1,"epNext":2.3,"status":"a","chance":null},{"id":96,"name":"Damsgaard","team":4,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.5,"epNext":2.0,"status":"a","chance":null},{"id":97,"name":"Jensen","team":4,"pos":3,"cost":55,"form":6.0,"totalPts":6,"ppg":6.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":98,"name":"Janelt","team":4,"pos":3,"cost":50,"form":9.0,"totalPts":9,"ppg":9.0,"selected":0.4,"epNext":1.5,"status":"a","chance":null},{"id":99,"name":"Milambo","team":4,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":100,"name":"Carvalho","team":4,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":100},{"id":102,"name":"Yarmoliuk","team":4,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.2,"epNext":1.5,"status":"a","chance":null},{"id":103,"name":"Dasilva","team":4,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":105,"name":"Anthony","team":4,"pos":3,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.2,"status":"a","chance":null},{"id":106,"name":"Thiago","team":4,"pos":4,"cost":80,"form":0.0,"totalPts":0,"ppg":0.0,"selected":16.7,"epNext":2.5,"status":"a","chance":null},{"id":107,"name":"Furo","team":4,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.9,"epNext":1.0,"status":"a","chance":null},{"id":108,"name":"Wilson","team":4,"pos":4,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.4,"epNext":1.8,"status":"a","chance":null},{"id":565,"name":"M.Sangar\u00e9","team":4,"pos":3,"cost":56,"form":14.0,"totalPts":14,"ppg":14.0,"selected":8.3,"epNext":2.0,"status":"a","chance":null},{"id":109,"name":"Verbruggen","team":5,"pos":1,"cost":45,"form":6.0,"totalPts":6,"ppg":6.0,"selected":21.5,"epNext":1.9,"status":"a","chance":null},{"id":111,"name":"Steele","team":5,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":4.0,"epNext":1.0,"status":"a","chance":null},{"id":113,"name":"F.Kad\u0131o\u011flu","team":5,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":2.3,"epNext":1.7,"status":"a","chance":100},{"id":114,"name":"Boscagli","team":5,"pos":2,"cost":45,"form":6.0,"totalPts":6,"ppg":6.0,"selected":0.3,"epNext":1.7,"status":"a","chance":null},{"id":115,"name":"De Cuyper","team":5,"pos":2,"cost":46,"form":17.0,"totalPts":17,"ppg":17.0,"selected":7.8,"epNext":1.9,"status":"a","chance":null},{"id":116,"name":"Dunk","team":5,"pos":2,"cost":45,"form":6.0,"totalPts":6,"ppg":6.0,"selected":1.2,"epNext":1.7,"status":"a","chance":null},{"id":117,"name":"Coppola","team":5,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":118,"name":"Igor","team":5,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.7,"status":"a","chance":null},{"id":119,"name":"Costinha","team":5,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":120,"name":"Svoboda","team":5,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.2,"status":"a","chance":null},{"id":121,"name":"Mitoma","team":5,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":122,"name":"Minteh","team":5,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":123,"name":"Hinshelwood","team":5,"pos":3,"cost":60,"form":16.0,"totalPts":16,"ppg":16.0,"selected":2.6,"epNext":0.5,"status":"d","chance":25},{"id":124,"name":"Gro\u00df","team":5,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":13.0,"epNext":2.0,"status":"a","chance":null},{"id":125,"name":"Georginio","team":5,"pos":4,"cost":55,"form":5.0,"totalPts":5,"ppg":5.0,"selected":1.0,"epNext":1.3,"status":"d","chance":75},{"id":126,"name":"O'Riley","team":5,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":127,"name":"Gomez","team":5,"pos":3,"cost":50,"form":6.0,"totalPts":6,"ppg":6.0,"selected":3.8,"epNext":1.5,"status":"a","chance":null},{"id":128,"name":"Buonanotte","team":5,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":129,"name":"Ayari","team":5,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.6,"epNext":2.0,"status":"a","chance":null},{"id":130,"name":"Wieffer","team":5,"pos":2,"cost":50,"form":7.0,"totalPts":7,"ppg":7.0,"selected":0.4,"epNext":2.2,"status":"a","chance":null},{"id":132,"name":"Howell","team":5,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":133,"name":"Watson","team":5,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":134,"name":"Oriola","team":5,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":1.0,"status":"a","chance":null},{"id":135,"name":"Yohanna","team":5,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":137,"name":"Tzimas","team":5,"pos":4,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":138,"name":"Kostoulas","team":5,"pos":4,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":1.8,"status":"a","chance":null},{"id":139,"name":"Ferguson","team":5,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":328,"name":"Struijk","team":5,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.2,"status":"a","chance":100},{"id":504,"name":"Vuskovic","team":5,"pos":2,"cost":50,"form":6.0,"totalPts":6,"ppg":6.0,"selected":2.5,"epNext":2.2,"status":"a","chance":null},{"id":594,"name":"David","team":5,"pos":4,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":2.0,"status":"a","chance":null},{"id":600,"name":"Osman","team":5,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":605,"name":"Yalcouy\u00e9","team":5,"pos":3,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":614,"name":"Hadjam","team":5,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":40,"name":"Rogers","team":6,"pos":3,"cost":75,"form":8.0,"totalPts":8,"ppg":8.0,"selected":26.1,"epNext":2.6,"status":"a","chance":null},{"id":101,"name":"Henderson","team":6,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.1,"status":"d","chance":75},{"id":136,"name":"Welbeck","team":6,"pos":4,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.0,"epNext":2.0,"status":"a","chance":100},{"id":140,"name":"S\u00e1nchez","team":6,"pos":1,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":2.3,"epNext":2.6,"status":"a","chance":null},{"id":141,"name":"J\u00f6rgensen","team":6,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":142,"name":"James","team":6,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":10.0,"epNext":2.5,"status":"a","chance":null},{"id":143,"name":"Chalobah","team":6,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":144,"name":"Gusto","team":6,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.2,"epNext":2.2,"status":"a","chance":null},{"id":145,"name":"Fofana","team":6,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.2,"status":"a","chance":100},{"id":146,"name":"B.Badiashile","team":6,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":147,"name":"Tosin","team":6,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.7,"status":"a","chance":null},{"id":148,"name":"Hato","team":6,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.5,"epNext":1.7,"status":"a","chance":null},{"id":149,"name":"Colwill","team":6,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.5,"epNext":2.2,"status":"a","chance":null},{"id":150,"name":"M.Sarr","team":6,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.7,"status":"a","chance":null},{"id":151,"name":"Acheampong","team":6,"pos":2,"cost":45,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.4,"epNext":1.7,"status":"a","chance":null},{"id":152,"name":"Palestra","team":6,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":2.3,"epNext":1.9,"status":"d","chance":75},{"id":153,"name":"Disasi","team":6,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.7,"status":"a","chance":null},{"id":154,"name":"Palmer","team":6,"pos":3,"cost":95,"form":13.0,"totalPts":13,"ppg":13.0,"selected":15.6,"epNext":3.2,"status":"a","chance":100},{"id":155,"name":"Enzo","team":6,"pos":3,"cost":70,"form":1.0,"totalPts":1,"ppg":1.0,"selected":4.5,"epNext":2.5,"status":"a","chance":null},{"id":156,"name":"Neto","team":6,"pos":3,"cost":65,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.2,"epNext":2.3,"status":"a","chance":null},{"id":157,"name":"Est\u00eav\u00e3o","team":6,"pos":3,"cost":65,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.1,"epNext":2.3,"status":"a","chance":null},{"id":158,"name":"Gittens","team":6,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.2,"status":"a","chance":null},{"id":159,"name":"Caicedo","team":6,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":3.0,"epNext":1.5,"status":"d","chance":75},{"id":161,"name":"Lavia","team":6,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":163,"name":"D.Essugo","team":6,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":164,"name":"Quenda","team":6,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":2.0,"status":"a","chance":100},{"id":165,"name":"Jo\u00e3o Pedro","team":6,"pos":4,"cost":76,"form":11.0,"totalPts":11,"ppg":11.0,"selected":67.8,"epNext":2.4,"status":"a","chance":null},{"id":166,"name":"N.Jackson","team":6,"pos":4,"cost":65,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":2.1,"status":"a","chance":null},{"id":167,"name":"Delap","team":6,"pos":4,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.5,"epNext":1.8,"status":"a","chance":null},{"id":168,"name":"Marc Guiu","team":6,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.5,"epNext":1.4,"status":"a","chance":null},{"id":169,"name":"Mheuka","team":6,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":1.0,"status":"a","chance":null},{"id":170,"name":"Emegha","team":6,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.4,"status":"a","chance":100},{"id":200,"name":"Lacroix","team":6,"pos":2,"cost":60,"form":6.0,"totalPts":6,"ppg":6.0,"selected":9.5,"epNext":2.8,"status":"a","chance":null},{"id":560,"name":"Penders","team":6,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.9,"status":"a","chance":null},{"id":561,"name":"Anselmino","team":6,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":100},{"id":568,"name":"Barco","team":6,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":578,"name":"Mudryk","team":6,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.0,"status":"a","chance":null},{"id":583,"name":"Chavarria","team":6,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.2,"status":"a","chance":null},{"id":104,"name":"Onyeka","team":7,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":110,"name":"Rushworth","team":7,"pos":1,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.2,"epNext":1.9,"status":"a","chance":null},{"id":171,"name":"Dovin","team":7,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.5,"epNext":1.0,"status":"a","chance":null},{"id":172,"name":"Wilson","team":7,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.5,"epNext":1.9,"status":"a","chance":null},{"id":173,"name":"Thomas","team":7,"pos":2,"cost":40,"form":3.0,"totalPts":3,"ppg":3.0,"selected":7.9,"epNext":1.0,"status":"a","chance":null},{"id":174,"name":"Kitching","team":7,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.7,"epNext":1.0,"status":"a","chance":null},{"id":175,"name":"van Ewijk","team":7,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":13.1,"epNext":1.0,"status":"a","chance":null},{"id":176,"name":"Dasilva","team":7,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.8,"epNext":1.0,"status":"a","chance":null},{"id":177,"name":"Kesler-Hayden","team":7,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":178,"name":"Bidwell","team":7,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":179,"name":"Latibeaudiere","team":7,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.0,"status":"a","chance":null},{"id":180,"name":"Woolfenden","team":7,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"i","chance":0},{"id":181,"name":"Brau","team":7,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.0,"status":"a","chance":null},{"id":182,"name":"Amenda","team":7,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.9,"epNext":1.0,"status":"a","chance":null},{"id":183,"name":"Rudoni","team":7,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":100},{"id":184,"name":"Grimes","team":7,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":185,"name":"Sakamoto","team":7,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":186,"name":"Mason-Clark","team":7,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.0,"status":"a","chance":100},{"id":187,"name":"Eccles","team":7,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":188,"name":"Torp","team":7,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":189,"name":"Shepherd","team":7,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":1.0,"status":"a","chance":null},{"id":190,"name":"Tchaouna","team":7,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":191,"name":"Borges Rodrigues","team":7,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":192,"name":"Andrews","team":7,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.6,"epNext":1.0,"status":"a","chance":null},{"id":193,"name":"Wright","team":7,"pos":4,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":194,"name":"Thomas-Asante","team":7,"pos":4,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.8,"epNext":1.4,"status":"a","chance":null},{"id":195,"name":"Simms","team":7,"pos":4,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.0,"epNext":1.4,"status":"a","chance":null},{"id":196,"name":"Markelo","team":7,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":197,"name":"Bassette","team":7,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":492,"name":"Awoniyi","team":7,"pos":4,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.8,"epNext":1.8,"status":"a","chance":null},{"id":575,"name":"Yirenkyi","team":7,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":584,"name":"Hamer","team":7,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":599,"name":"Cherif","team":7,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.4,"status":"a","chance":null},{"id":42,"name":"Guessand","team":8,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":2.0,"status":"a","chance":null},{"id":198,"name":"Henderson","team":8,"pos":1,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.8,"epNext":2.6,"status":"a","chance":100},{"id":199,"name":"Benitez","team":8,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.9,"status":"a","chance":null},{"id":201,"name":"Mu\u00f1oz","team":8,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":8.4,"epNext":2.5,"status":"a","chance":null},{"id":202,"name":"Richards","team":8,"pos":2,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.7,"epNext":2.2,"status":"a","chance":null},{"id":203,"name":"Canvot","team":8,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.3,"epNext":2.2,"status":"a","chance":null},{"id":204,"name":"Mitchell","team":8,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":5.6,"epNext":1.7,"status":"a","chance":null},{"id":205,"name":"Sosa","team":8,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":206,"name":"Chadi Riad","team":8,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":207,"name":"Mingueza","team":8,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.7,"status":"a","chance":null},{"id":208,"name":"Sarr","team":8,"pos":3,"cost":64,"form":0.0,"totalPts":0,"ppg":0.0,"selected":2.7,"epNext":0.0,"status":"i","chance":0},{"id":210,"name":"Wharton","team":8,"pos":3,"cost":55,"form":4.0,"totalPts":4,"ppg":4.0,"selected":0.9,"epNext":2.0,"status":"a","chance":100},{"id":211,"name":"Yeremy","team":8,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":212,"name":"Hughes","team":8,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":10.9,"epNext":1.0,"status":"a","chance":null},{"id":213,"name":"Lerma","team":8,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":214,"name":"Kamada","team":8,"pos":3,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.3,"epNext":1.5,"status":"a","chance":null},{"id":215,"name":"Devenny","team":8,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":216,"name":"Esse","team":8,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":217,"name":"M.Fran\u00e7a","team":8,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":218,"name":"Doucour\u00e9","team":8,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":219,"name":"J.Rak-Sakyi","team":8,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":220,"name":"Cardines","team":8,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":221,"name":"Drakes-Thomas","team":8,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":222,"name":"Strand Larsen","team":8,"pos":4,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.5,"epNext":2.0,"status":"a","chance":null},{"id":223,"name":"Mateta","team":8,"pos":4,"cost":65,"form":2.0,"totalPts":2,"ppg":2.0,"selected":5.3,"epNext":2.1,"status":"a","chance":null},{"id":224,"name":"Nketiah","team":8,"pos":4,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.5,"epNext":1.8,"status":"a","chance":null},{"id":225,"name":"Uche","team":8,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":241,"name":"McNeil","team":8,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":555,"name":"Matthews","team":8,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.8,"epNext":1.0,"status":"a","chance":null},{"id":577,"name":"Tomiyasu","team":8,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.4,"epNext":1.7,"status":"a","chance":null},{"id":588,"name":"Khalaili","team":8,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":2.2,"status":"a","chance":null},{"id":595,"name":"Gozo","team":8,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":21,"name":"N\u00f8rgaard","team":9,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":209,"name":"Johnson","team":9,"pos":3,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.2,"status":"a","chance":null},{"id":226,"name":"Pickford","team":9,"pos":1,"cost":55,"form":7.0,"totalPts":7,"ppg":7.0,"selected":8.8,"epNext":3.3,"status":"a","chance":null},{"id":227,"name":"Travers","team":9,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.6,"status":"a","chance":null},{"id":228,"name":"King","team":9,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.9,"status":"a","chance":null},{"id":229,"name":"Tarkowski","team":9,"pos":2,"cost":60,"form":6.0,"totalPts":6,"ppg":6.0,"selected":8.7,"epNext":2.8,"status":"a","chance":null},{"id":230,"name":"Branthwaite","team":9,"pos":2,"cost":55,"form":6.0,"totalPts":6,"ppg":6.0,"selected":1.8,"epNext":2.5,"status":"a","chance":null},{"id":231,"name":"Keane","team":9,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.4,"epNext":2.2,"status":"a","chance":null},{"id":232,"name":"O'Brien","team":9,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.4,"epNext":2.2,"status":"a","chance":null},{"id":233,"name":"Mykolenko","team":9,"pos":2,"cost":45,"form":6.0,"totalPts":6,"ppg":6.0,"selected":1.6,"epNext":1.7,"status":"a","chance":null},{"id":234,"name":"Patterson","team":9,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":235,"name":"Aznou","team":9,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":236,"name":"Dewsbury-Hall","team":9,"pos":3,"cost":65,"form":11.0,"totalPts":11,"ppg":11.0,"selected":4.6,"epNext":2.3,"status":"a","chance":null},{"id":237,"name":"Ndiaye","team":9,"pos":3,"cost":60,"form":9.0,"totalPts":9,"ppg":9.0,"selected":16.1,"epNext":2.2,"status":"a","chance":null},{"id":239,"name":"Garner","team":9,"pos":3,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":2.2,"status":"a","chance":100},{"id":240,"name":"Iroegbunam","team":9,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":242,"name":"George","team":9,"pos":3,"cost":55,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.3,"epNext":2.0,"status":"a","chance":null},{"id":243,"name":"Alcaraz","team":9,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":244,"name":"Armstrong","team":9,"pos":3,"cost":50,"form":8.0,"totalPts":8,"ppg":8.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":245,"name":"Dibling","team":9,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.0,"status":"a","chance":null},{"id":246,"name":"R\u00f6hl","team":9,"pos":3,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":247,"name":"Hackney","team":9,"pos":3,"cost":55,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.3,"epNext":1.5,"status":"d","chance":75},{"id":248,"name":"Beto","team":9,"pos":4,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":2.4,"epNext":1.8,"status":"a","chance":null},{"id":249,"name":"Barry","team":9,"pos":4,"cost":55,"form":8.0,"totalPts":8,"ppg":8.0,"selected":3.2,"epNext":1.8,"status":"a","chance":null},{"id":250,"name":"Leno","team":10,"pos":1,"cost":45,"form":2.0,"totalPts":2,"ppg":2.0,"selected":3.0,"epNext":1.9,"status":"a","chance":null},{"id":251,"name":"Lecomte","team":10,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.2,"epNext":1.0,"status":"a","chance":null},{"id":252,"name":"McNally","team":10,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":253,"name":"Andersen","team":10,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.2,"status":"a","chance":100},{"id":254,"name":"Robinson","team":10,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.7,"epNext":1.7,"status":"a","chance":null},{"id":255,"name":"J.Cuenca","team":10,"pos":2,"cost":45,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":256,"name":"Tete","team":10,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":1.7,"status":"a","chance":null},{"id":257,"name":"Bassey","team":10,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.8,"epNext":1.7,"status":"a","chance":null},{"id":258,"name":"Castagne","team":10,"pos":2,"cost":45,"form":6.0,"totalPts":6,"ppg":6.0,"selected":0.4,"epNext":1.7,"status":"a","chance":null},{"id":261,"name":"Iwobi","team":10,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.0,"epNext":2.0,"status":"a","chance":null},{"id":262,"name":"Smith Rowe","team":10,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.4,"epNext":2.0,"status":"a","chance":null},{"id":263,"name":"Kevin","team":10,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":264,"name":"Bobb","team":10,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.3,"epNext":2.0,"status":"a","chance":null},{"id":265,"name":"Berge","team":10,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.4,"epNext":1.5,"status":"a","chance":null},{"id":266,"name":"Cairney","team":10,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":268,"name":"King","team":10,"pos":3,"cost":55,"form":7.0,"totalPts":7,"ppg":7.0,"selected":0.5,"epNext":2.0,"status":"a","chance":null},{"id":269,"name":"Sessegnon","team":10,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.4,"epNext":1.7,"status":"a","chance":null},{"id":270,"name":"Reed","team":10,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.4,"epNext":1.0,"status":"a","chance":null},{"id":271,"name":"Muniz","team":10,"pos":4,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.6,"epNext":1.8,"status":"a","chance":null},{"id":272,"name":"Kusi-Asare","team":10,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":7.0,"epNext":1.0,"status":"a","chance":null},{"id":569,"name":"Gonzalo","team":10,"pos":4,"cost":60,"form":6.0,"totalPts":6,"ppg":6.0,"selected":3.6,"epNext":2.0,"status":"a","chance":null},{"id":570,"name":"Palacios","team":10,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":580,"name":"Charles","team":10,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":610,"name":"De Fougerolles","team":10,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":273,"name":"Phillips","team":11,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.5,"epNext":1.0,"status":"a","chance":null},{"id":274,"name":"Butland","team":11,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":275,"name":"Cartwright","team":11,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":276,"name":"Lo-Tutala","team":11,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":277,"name":"Egan","team":11,"pos":2,"cost":40,"form":8.0,"totalPts":8,"ppg":8.0,"selected":2.0,"epNext":1.0,"status":"a","chance":null},{"id":278,"name":"Hughes","team":11,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":279,"name":"Ajayi","team":11,"pos":2,"cost":40,"form":14.0,"totalPts":14,"ppg":14.0,"selected":1.8,"epNext":1.0,"status":"a","chance":100},{"id":280,"name":"Coyle","team":11,"pos":2,"cost":40,"form":6.0,"totalPts":6,"ppg":6.0,"selected":0.6,"epNext":1.0,"status":"a","chance":100},{"id":281,"name":"Drameh","team":11,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.0,"status":"a","chance":100},{"id":282,"name":"Giles","team":11,"pos":2,"cost":40,"form":6.0,"totalPts":6,"ppg":6.0,"selected":0.9,"epNext":1.0,"status":"a","chance":null},{"id":283,"name":"Jacob","team":11,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":284,"name":"McCarthy","team":11,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":285,"name":"McNair","team":11,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":286,"name":"Belloumi","team":11,"pos":3,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.6,"epNext":1.5,"status":"a","chance":null},{"id":287,"name":"Millar","team":11,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":288,"name":"Dowell","team":11,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.4,"epNext":1.0,"status":"a","chance":null},{"id":289,"name":"Crooks","team":11,"pos":3,"cost":45,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.7,"epNext":1.0,"status":"a","chance":null},{"id":290,"name":"Slater","team":11,"pos":3,"cost":45,"form":6.0,"totalPts":6,"ppg":6.0,"selected":3.8,"epNext":1.0,"status":"a","chance":null},{"id":291,"name":"Matazo","team":11,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":292,"name":"\u00d6m\u00fcr","team":11,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":293,"name":"Kamara","team":11,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":294,"name":"Zambrano","team":11,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":295,"name":"McBurnie","team":11,"pos":4,"cost":55,"form":5.0,"totalPts":5,"ppg":5.0,"selected":2.1,"epNext":1.8,"status":"a","chance":null},{"id":296,"name":"Akintola","team":11,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":297,"name":"Gyabi","team":11,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":298,"name":"Destan","team":11,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":0.0,"status":"u","chance":0},{"id":299,"name":"Burstow","team":11,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":340,"name":"Gelhardt","team":11,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":556,"name":"Targett","team":11,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":2.3,"epNext":1.0,"status":"a","chance":null},{"id":563,"name":"Morita","team":11,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":100},{"id":572,"name":"Tzolakis","team":11,"pos":1,"cost":45,"form":10.0,"totalPts":10,"ppg":10.0,"selected":2.7,"epNext":1.9,"status":"a","chance":null},{"id":574,"name":"Hjert\u00f8-Dahl","team":11,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":576,"name":"Stroud","team":11,"pos":3,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":585,"name":"Herrington","team":11,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.7,"epNext":1.0,"status":"a","chance":null},{"id":586,"name":"Mendy","team":11,"pos":2,"cost":40,"form":15.0,"totalPts":15,"ppg":15.0,"selected":3.6,"epNext":1.0,"status":"a","chance":100},{"id":589,"name":"Gourna-Douath","team":11,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":259,"name":"Diop","team":12,"pos":2,"cost":40,"form":2.0,"totalPts":2,"ppg":2.0,"selected":17.1,"epNext":1.0,"status":"a","chance":null},{"id":267,"name":"Luki\u0107","team":12,"pos":3,"cost":50,"form":5.0,"totalPts":5,"ppg":5.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":300,"name":"Walton","team":12,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.5,"epNext":1.9,"status":"a","chance":null},{"id":301,"name":"Palmer","team":12,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":4.5,"epNext":1.0,"status":"a","chance":null},{"id":302,"name":"Button","team":12,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.4,"epNext":1.0,"status":"a","chance":null},{"id":303,"name":"Kipr\u00e9","team":12,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.6,"epNext":1.0,"status":"a","chance":null},{"id":304,"name":"O'Shea","team":12,"pos":2,"cost":40,"form":4.0,"totalPts":4,"ppg":4.0,"selected":3.4,"epNext":1.0,"status":"a","chance":null},{"id":305,"name":"Davis","team":12,"pos":2,"cost":40,"form":2.0,"totalPts":2,"ppg":2.0,"selected":4.9,"epNext":1.0,"status":"a","chance":null},{"id":306,"name":"Greaves","team":12,"pos":2,"cost":40,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.4,"epNext":1.0,"status":"a","chance":null},{"id":307,"name":"Johnson","team":12,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":308,"name":"Furlong","team":12,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.6,"epNext":1.0,"status":"a","chance":null},{"id":309,"name":"N\u00fa\u00f1ez","team":12,"pos":3,"cost":50,"form":4.0,"totalPts":4,"ppg":4.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":310,"name":"Matusiwa","team":12,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":311,"name":"Burns","team":12,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":312,"name":"Taylor","team":12,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":313,"name":"Clarke","team":12,"pos":3,"cost":55,"form":7.0,"totalPts":7,"ppg":7.0,"selected":0.3,"epNext":2.0,"status":"a","chance":null},{"id":314,"name":"Ogbene","team":12,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":315,"name":"Fatawu","team":12,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":316,"name":"Emersonn","team":12,"pos":4,"cost":55,"form":9.0,"totalPts":9,"ppg":9.0,"selected":1.7,"epNext":1.8,"status":"a","chance":null},{"id":317,"name":"Hirst","team":12,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"u","chance":0},{"id":318,"name":"Philogene","team":12,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":319,"name":"Szmodics","team":12,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":320,"name":"Akpom","team":12,"pos":4,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.5,"epNext":1.4,"status":"a","chance":null},{"id":321,"name":"Walle Egeli","team":12,"pos":4,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":2.4,"epNext":1.0,"status":"a","chance":null},{"id":322,"name":"Al-Hamadi","team":12,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":323,"name":"McAteer","team":12,"pos":3,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.4,"epNext":1.0,"status":"a","chance":null},{"id":324,"name":"Mehmeti","team":12,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":554,"name":"Van Oevelen","team":12,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":562,"name":"Maeda","team":12,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.4,"epNext":2.0,"status":"a","chance":null},{"id":564,"name":"Scherpen","team":12,"pos":1,"cost":45,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.6,"epNext":1.9,"status":"a","chance":null},{"id":571,"name":"Florentino","team":12,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.1,"status":"d","chance":75},{"id":591,"name":"Enciso","team":12,"pos":3,"cost":55,"form":5.0,"totalPts":5,"ppg":5.0,"selected":0.5,"epNext":2.0,"status":"a","chance":100},{"id":592,"name":"Ouattara","team":12,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.0,"epNext":1.0,"status":"a","chance":null},{"id":602,"name":"Humphreys","team":12,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.0,"status":"a","chance":null},{"id":260,"name":"Wilson","team":13,"pos":3,"cost":65,"form":3.0,"totalPts":3,"ppg":3.0,"selected":5.7,"epNext":2.3,"status":"a","chance":null},{"id":326,"name":"Perri","team":13,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.6,"epNext":1.9,"status":"a","chance":null},{"id":327,"name":"Bijol","team":13,"pos":2,"cost":50,"form":10.0,"totalPts":10,"ppg":10.0,"selected":0.9,"epNext":2.2,"status":"a","chance":null},{"id":329,"name":"Rodon","team":13,"pos":2,"cost":45,"form":6.0,"totalPts":6,"ppg":6.0,"selected":3.6,"epNext":1.7,"status":"a","chance":null},{"id":330,"name":"Bogle","team":13,"pos":2,"cost":45,"form":6.0,"totalPts":6,"ppg":6.0,"selected":0.6,"epNext":1.7,"status":"a","chance":null},{"id":331,"name":"Gudmundsson","team":13,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":332,"name":"Justin","team":13,"pos":2,"cost":45,"form":10.0,"totalPts":10,"ppg":10.0,"selected":1.1,"epNext":1.7,"status":"a","chance":null},{"id":333,"name":"Bornauw","team":13,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":334,"name":"Muharemovi\u0107","team":13,"pos":2,"cost":50,"form":6.0,"totalPts":6,"ppg":6.0,"selected":3.4,"epNext":2.2,"status":"a","chance":null},{"id":335,"name":"Stach","team":13,"pos":3,"cost":60,"form":13.0,"totalPts":13,"ppg":13.0,"selected":2.3,"epNext":2.2,"status":"a","chance":null},{"id":336,"name":"Okafor","team":13,"pos":3,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.4,"epNext":2.2,"status":"a","chance":null},{"id":337,"name":"Aaronson","team":13,"pos":3,"cost":55,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.9,"epNext":2.0,"status":"a","chance":null},{"id":338,"name":"Ampadu","team":13,"pos":3,"cost":55,"form":5.0,"totalPts":5,"ppg":5.0,"selected":1.4,"epNext":2.0,"status":"a","chance":null},{"id":339,"name":"Longstaff","team":13,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":341,"name":"Gnonto","team":13,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":342,"name":"Harrison","team":13,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":343,"name":"James","team":13,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":344,"name":"Gruev","team":13,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":345,"name":"Tanaka","team":13,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":346,"name":"Calvert-Lewin","team":13,"pos":4,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":28.8,"epNext":2.0,"status":"a","chance":null},{"id":347,"name":"Nmecha","team":13,"pos":4,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.5,"epNext":1.8,"status":"a","chance":null},{"id":348,"name":"Piroe","team":13,"pos":4,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":349,"name":"Mateo Joseph","team":13,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":385,"name":"Trafford","team":13,"pos":1,"cost":50,"form":9.0,"totalPts":9,"ppg":9.0,"selected":4.2,"epNext":2.6,"status":"a","chance":null},{"id":598,"name":"Elvedi","team":13,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":603,"name":"Lienou","team":13,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":604,"name":"Cresswell","team":13,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":350,"name":"A.Becker","team":14,"pos":1,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":3.8,"epNext":3.3,"status":"a","chance":null},{"id":351,"name":"Mamardashvili","team":14,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.6,"status":"a","chance":null},{"id":352,"name":"Woodman","team":14,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.1,"epNext":1.0,"status":"a","chance":null},{"id":353,"name":"Pecsi","team":14,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":354,"name":"Jaros","team":14,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":355,"name":"Davies","team":14,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":356,"name":"Virgil","team":14,"pos":2,"cost":65,"form":2.0,"totalPts":2,"ppg":2.0,"selected":19.6,"epNext":3.1,"status":"a","chance":null},{"id":357,"name":"Frimpong","team":14,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":3.4,"epNext":2.5,"status":"a","chance":null},{"id":358,"name":"Kerkez","team":14,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":3.5,"epNext":2.5,"status":"a","chance":null},{"id":359,"name":"Gomez","team":14,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":360,"name":"Bradley","team":14,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":361,"name":"Lucky","team":14,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":362,"name":"Jacquet","team":14,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":2.4,"epNext":2.2,"status":"a","chance":100},{"id":363,"name":"Leoni","team":14,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":364,"name":"Tsimikas","team":14,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.2,"status":"a","chance":null},{"id":365,"name":"Ramsay","team":14,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"u","chance":0},{"id":366,"name":"Wirtz","team":14,"pos":3,"cost":75,"form":2.0,"totalPts":2,"ppg":2.0,"selected":11.5,"epNext":2.6,"status":"a","chance":null},{"id":367,"name":"Gakpo","team":14,"pos":3,"cost":70,"form":12.0,"totalPts":12,"ppg":12.0,"selected":6.1,"epNext":2.5,"status":"a","chance":null},{"id":368,"name":"Szoboszlai","team":14,"pos":3,"cost":70,"form":8.0,"totalPts":8,"ppg":8.0,"selected":43.2,"epNext":2.5,"status":"a","chance":null},{"id":369,"name":"Ngumoha","team":14,"pos":3,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.1,"epNext":2.2,"status":"a","chance":null},{"id":370,"name":"Chiesa","team":14,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":371,"name":"Gravenberch","team":14,"pos":3,"cost":60,"form":5.0,"totalPts":5,"ppg":5.0,"selected":2.0,"epNext":2.2,"status":"a","chance":null},{"id":372,"name":"Mac Allister","team":14,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.6,"epNext":2.0,"status":"a","chance":null},{"id":373,"name":"C.Jones","team":14,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"d","chance":75},{"id":374,"name":"Endo","team":14,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":100},{"id":375,"name":"Nyoni","team":14,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":376,"name":"Bajcetic","team":14,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":377,"name":"Munoz","team":14,"pos":3,"cost":65,"form":4.0,"totalPts":4,"ppg":4.0,"selected":0.6,"epNext":2.3,"status":"a","chance":null},{"id":378,"name":"McConnell","team":14,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":1.0,"status":"a","chance":null},{"id":379,"name":"Isak","team":14,"pos":4,"cost":90,"form":2.0,"totalPts":2,"ppg":2.0,"selected":16.5,"epNext":2.7,"status":"a","chance":null},{"id":380,"name":"Ekitik\u00e9","team":14,"pos":4,"cost":75,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":381,"name":"Koumas","team":14,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":382,"name":"Danns","team":14,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":383,"name":"Elliott","team":14,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":579,"name":"Araujo","team":14,"pos":2,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":2.7,"epNext":2.5,"status":"a","chance":null},{"id":238,"name":"Grealish","team":15,"pos":3,"cost":65,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.3,"status":"a","chance":100},{"id":384,"name":"Donnarumma","team":15,"pos":1,"cost":55,"form":3.0,"totalPts":3,"ppg":3.0,"selected":8.3,"epNext":3.3,"status":"a","chance":null},{"id":386,"name":"Bettinelli","team":15,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.9,"status":"a","chance":null},{"id":387,"name":"O'Reilly","team":15,"pos":2,"cost":65,"form":2.0,"totalPts":2,"ppg":2.0,"selected":20.9,"epNext":3.1,"status":"a","chance":null},{"id":388,"name":"Gu\u00e9hi","team":15,"pos":2,"cost":60,"form":10.0,"totalPts":10,"ppg":10.0,"selected":19.4,"epNext":2.8,"status":"a","chance":null},{"id":389,"name":"Matheus N.","team":15,"pos":2,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.5,"epNext":2.1,"status":"d","chance":75},{"id":390,"name":"R\u00faben","team":15,"pos":2,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.8,"epNext":2.5,"status":"a","chance":null},{"id":391,"name":"Gvardiol","team":15,"pos":2,"cost":55,"form":9.0,"totalPts":9,"ppg":9.0,"selected":13.5,"epNext":2.5,"status":"a","chance":null},{"id":392,"name":"A\u00eft-Nouri","team":15,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.8,"epNext":2.5,"status":"a","chance":null},{"id":393,"name":"Khusanov","team":15,"pos":2,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.7,"epNext":2.5,"status":"a","chance":null},{"id":394,"name":"Alleyne","team":15,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":395,"name":"Lewis","team":15,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":1.7,"status":"a","chance":null},{"id":396,"name":"Vitor Reis","team":15,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":397,"name":"Semenyo","team":15,"pos":3,"cost":85,"form":2.0,"totalPts":2,"ppg":2.0,"selected":24.3,"epNext":2.9,"status":"a","chance":null},{"id":398,"name":"Foden","team":15,"pos":3,"cost":70,"form":1.0,"totalPts":1,"ppg":1.0,"selected":4.1,"epNext":2.5,"status":"a","chance":null},{"id":399,"name":"Cherki","team":15,"pos":3,"cost":75,"form":8.0,"totalPts":8,"ppg":8.0,"selected":10.5,"epNext":2.6,"status":"a","chance":null},{"id":400,"name":"Doku","team":15,"pos":3,"cost":75,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.3,"epNext":0.0,"status":"i","chance":0},{"id":401,"name":"Marmoush","team":15,"pos":4,"cost":70,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.1,"epNext":2.2,"status":"a","chance":null},{"id":402,"name":"Rodrigo","team":15,"pos":3,"cost":65,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":404,"name":"Reijnders","team":15,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":405,"name":"N.Gonzalez","team":15,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":406,"name":"Kova\u010di\u0107","team":15,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":407,"name":"Echeverri","team":15,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":408,"name":"Phillips","team":15,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":409,"name":"Mukasa","team":15,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":410,"name":"Monga","team":15,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":411,"name":"Haaland","team":15,"pos":4,"cost":155,"form":2.0,"totalPts":2,"ppg":2.0,"selected":67.9,"epNext":4.0,"status":"a","chance":null},{"id":481,"name":"Anderson","team":15,"pos":3,"cost":64,"form":2.0,"totalPts":2,"ppg":2.0,"selected":6.1,"epNext":2.3,"status":"a","chance":100},{"id":587,"name":"Rulli","team":15,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.6,"status":"a","chance":null},{"id":616,"name":"Bouaddi","team":15,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.0,"status":"a","chance":null},{"id":43,"name":"Tielemans","team":16,"pos":3,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":2.4,"epNext":2.2,"status":"a","chance":100},{"id":131,"name":"Baleba","team":16,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"i","chance":0},{"id":162,"name":"Andrey Santos","team":16,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.0,"epNext":1.5,"status":"a","chance":null},{"id":325,"name":"Darlow","team":16,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.9,"status":"a","chance":100},{"id":412,"name":"Lammens","team":16,"pos":1,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":15.6,"epNext":2.6,"status":"a","chance":null},{"id":413,"name":"Bayindir","team":16,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":414,"name":"Heaton","team":16,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":415,"name":"Dorgu","team":16,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.1,"epNext":2.2,"status":"a","chance":null},{"id":416,"name":"De Ligt","team":16,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":417,"name":"Dalot","team":16,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":2.5,"epNext":2.2,"status":"a","chance":null},{"id":418,"name":"Maguire","team":16,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":17.1,"epNext":2.2,"status":"a","chance":null},{"id":419,"name":"Martinez","team":16,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.3,"epNext":2.2,"status":"a","chance":100},{"id":420,"name":"Yoro","team":16,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.6,"epNext":2.2,"status":"a","chance":null},{"id":421,"name":"Heaven","team":16,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.4,"epNext":1.7,"status":"a","chance":null},{"id":422,"name":"Mazraoui","team":16,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.7,"epNext":1.7,"status":"a","chance":null},{"id":423,"name":"Shaw","team":16,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":19.7,"epNext":1.7,"status":"a","chance":null},{"id":424,"name":"Amass","team":16,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":425,"name":"Fredricson","team":16,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":426,"name":"B.Fernandes","team":16,"pos":3,"cost":120,"form":2.0,"totalPts":2,"ppg":2.0,"selected":48.4,"epNext":4.0,"status":"a","chance":null},{"id":427,"name":"Mbeumo","team":16,"pos":3,"cost":80,"form":2.0,"totalPts":2,"ppg":2.0,"selected":36.0,"epNext":2.8,"status":"a","chance":null},{"id":428,"name":"Cunha","team":16,"pos":3,"cost":80,"form":2.0,"totalPts":2,"ppg":2.0,"selected":9.4,"epNext":2.8,"status":"a","chance":null},{"id":429,"name":"Rashford","team":16,"pos":3,"cost":70,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.7,"epNext":2.5,"status":"a","chance":null},{"id":430,"name":"Mount","team":16,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"d","chance":75},{"id":431,"name":"Amad","team":16,"pos":3,"cost":59,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.0,"epNext":1.6,"status":"d","chance":75},{"id":432,"name":"Mainoo","team":16,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.0,"epNext":2.0,"status":"a","chance":null},{"id":433,"name":"Ugarte","team":16,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":434,"name":"J.Fletcher","team":16,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":435,"name":"Lacey","team":16,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":436,"name":"Collyer","team":16,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":437,"name":"Bendito Mantato","team":16,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":438,"name":"Fletcher","team":16,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":1.0,"status":"a","chance":null},{"id":439,"name":"\u0160e\u0161ko","team":16,"pos":4,"cost":70,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.8,"epNext":2.2,"status":"a","chance":100},{"id":440,"name":"Zirkzee","team":16,"pos":4,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.5,"epNext":1.8,"status":"a","chance":null},{"id":441,"name":"Obi","team":16,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.1,"epNext":1.0,"status":"a","chance":null},{"id":442,"name":"Pope","team":17,"pos":1,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.3,"epNext":2.6,"status":"a","chance":null},{"id":443,"name":"Gillespie","team":17,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.9,"status":"a","chance":null},{"id":444,"name":"Jaouen","team":17,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.9,"status":"a","chance":null},{"id":445,"name":"Thiaw","team":17,"pos":2,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":1.7,"epNext":2.2,"status":"a","chance":null},{"id":446,"name":"Sch\u00e4r","team":17,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.3,"epNext":2.2,"status":"a","chance":100},{"id":447,"name":"Botman","team":17,"pos":2,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.5,"epNext":2.2,"status":"a","chance":null},{"id":448,"name":"Burn","team":17,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.7,"epNext":0.0,"status":"i","chance":0},{"id":449,"name":"Hall","team":17,"pos":2,"cost":50,"form":3.0,"totalPts":3,"ppg":3.0,"selected":4.1,"epNext":2.2,"status":"a","chance":null},{"id":450,"name":"Livramento","team":17,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":451,"name":"A.Murphy","team":17,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":453,"name":"Barnes","team":17,"pos":3,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.1,"epNext":2.2,"status":"a","chance":null},{"id":454,"name":"Elanga","team":17,"pos":3,"cost":60,"form":9.0,"totalPts":9,"ppg":9.0,"selected":2.0,"epNext":2.2,"status":"a","chance":null},{"id":456,"name":"J.Ramsey","team":17,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.4,"epNext":1.5,"status":"a","chance":null},{"id":457,"name":"J.Murphy","team":17,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.2,"status":"a","chance":null},{"id":458,"name":"Joelinton","team":17,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":459,"name":"L.Miley","team":17,"pos":3,"cost":55,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.1,"epNext":2.0,"status":"a","chance":100},{"id":460,"name":"Willock","team":17,"pos":3,"cost":50,"form":6.0,"totalPts":6,"ppg":6.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":461,"name":"Tour\u00e9","team":17,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.2,"status":"a","chance":null},{"id":462,"name":"Steur","team":17,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":463,"name":"Woltemade","team":17,"pos":4,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.6,"epNext":2.0,"status":"a","chance":null},{"id":464,"name":"Wissa","team":17,"pos":4,"cost":60,"form":4.0,"totalPts":4,"ppg":4.0,"selected":3.3,"epNext":2.0,"status":"a","chance":null},{"id":465,"name":"Osula","team":17,"pos":4,"cost":60,"form":4.0,"totalPts":4,"ppg":4.0,"selected":1.0,"epNext":0.0,"status":"i","chance":0},{"id":466,"name":"Neave","team":17,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.8,"epNext":1.0,"status":"a","chance":null},{"id":559,"name":"Bamba","team":17,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":567,"name":"Horn\u00ed\u010dek","team":17,"pos":1,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.7,"epNext":2.6,"status":"a","chance":null},{"id":593,"name":"Dedi\u0107","team":17,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.4,"epNext":1.7,"status":"a","chance":null},{"id":609,"name":"Shahar","team":17,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":467,"name":"Sels","team":18,"pos":1,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.5,"epNext":2.6,"status":"a","chance":null},{"id":468,"name":"John","team":18,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.9,"status":"a","chance":null},{"id":469,"name":"N.Williams","team":18,"pos":2,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":9.1,"epNext":2.2,"status":"a","chance":null},{"id":470,"name":"Morato","team":18,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":2.2,"status":"a","chance":null},{"id":471,"name":"Milenkovi\u0107","team":18,"pos":2,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.8,"epNext":2.5,"status":"a","chance":null},{"id":472,"name":"Murillo","team":18,"pos":2,"cost":55,"form":4.0,"totalPts":4,"ppg":4.0,"selected":1.7,"epNext":2.5,"status":"a","chance":100},{"id":473,"name":"Aina","team":18,"pos":2,"cost":45,"form":5.0,"totalPts":5,"ppg":5.0,"selected":3.5,"epNext":1.7,"status":"a","chance":null},{"id":474,"name":"Jair Cunha","team":18,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":1.7,"status":"a","chance":null},{"id":475,"name":"Savona","team":18,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":476,"name":"O.Richards","team":18,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":477,"name":"Abbott","team":18,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":1.0,"status":"a","chance":null},{"id":478,"name":"Netz","team":18,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":479,"name":"Bindon","team":18,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":1.0,"status":"a","chance":null},{"id":480,"name":"Gibbs-White","team":18,"pos":3,"cost":80,"form":2.0,"totalPts":2,"ppg":2.0,"selected":8.6,"epNext":2.8,"status":"a","chance":100},{"id":482,"name":"Hudson-Odoi","team":18,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.2,"status":"a","chance":100},{"id":483,"name":"Ndoye","team":18,"pos":3,"cost":55,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.4,"epNext":2.0,"status":"a","chance":null},{"id":484,"name":"Hutchinson","team":18,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":485,"name":"Bakwa","team":18,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":486,"name":"McAtee","team":18,"pos":3,"cost":55,"form":3.0,"totalPts":3,"ppg":3.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":487,"name":"Dominguez","team":18,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":488,"name":"I.Sangar\u00e9","team":18,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":1.0,"epNext":0.0,"status":"i","chance":0},{"id":489,"name":"Yates","team":18,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.4,"epNext":1.0,"status":"a","chance":100},{"id":490,"name":"Wood","team":18,"pos":4,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.6,"epNext":2.0,"status":"a","chance":null},{"id":491,"name":"Igor Jesus","team":18,"pos":4,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":3.8,"epNext":2.0,"status":"a","chance":null},{"id":493,"name":"Kalimuendo","team":18,"pos":4,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.8,"status":"a","chance":null},{"id":558,"name":"Schlager","team":18,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":581,"name":"Diomande","team":18,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.7,"epNext":2.5,"status":"a","chance":null},{"id":590,"name":"Benda","team":18,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.9,"status":"a","chance":null},{"id":112,"name":"Van Hecke","team":19,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":9.7,"epNext":2.2,"status":"a","chance":null},{"id":403,"name":"S\u00e1vio","team":19,"pos":3,"cost":65,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.7,"epNext":2.3,"status":"a","chance":null},{"id":455,"name":"Tonali","team":19,"pos":3,"cost":55,"form":2.0,"totalPts":2,"ppg":2.0,"selected":3.8,"epNext":2.0,"status":"a","chance":null},{"id":494,"name":"Vicario","team":19,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"u","chance":0},{"id":495,"name":"Austin","team":19,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.9,"epNext":1.0,"status":"a","chance":null},{"id":496,"name":"Kinsky","team":19,"pos":1,"cost":45,"form":2.0,"totalPts":2,"ppg":2.0,"selected":22.8,"epNext":1.9,"status":"a","chance":null},{"id":497,"name":"Dubravka","team":19,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":18.6,"epNext":1.0,"status":"a","chance":null},{"id":498,"name":"Senesi","team":19,"pos":2,"cost":60,"form":3.0,"totalPts":3,"ppg":3.0,"selected":7.6,"epNext":2.8,"status":"a","chance":null},{"id":499,"name":"Pedro Porro","team":19,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":13.6,"epNext":2.5,"status":"a","chance":100},{"id":500,"name":"Romero","team":19,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"u","chance":0},{"id":501,"name":"Danso","team":19,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":2.2,"status":"a","chance":null},{"id":502,"name":"Robertson","team":19,"pos":2,"cost":45,"form":3.0,"totalPts":3,"ppg":3.0,"selected":3.8,"epNext":1.7,"status":"a","chance":null},{"id":503,"name":"Van de Ven","team":19,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":4.3,"epNext":2.2,"status":"a","chance":100},{"id":505,"name":"Spence","team":19,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.5,"epNext":0.0,"status":"u","chance":0},{"id":506,"name":"Udogie","team":19,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.5,"epNext":1.7,"status":"a","chance":null},{"id":507,"name":"Phillips","team":19,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"u","chance":0},{"id":508,"name":"Davies","team":19,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.1,"epNext":1.0,"status":"a","chance":null},{"id":509,"name":"Byfield","team":19,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":510,"name":"Rowswell","team":19,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":511,"name":"Souza","team":19,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":1.0,"status":"a","chance":null},{"id":512,"name":"Kudus","team":19,"pos":3,"cost":65,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.1,"status":"d","chance":50},{"id":513,"name":"Xavi","team":19,"pos":3,"cost":60,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":514,"name":"Tel","team":19,"pos":3,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.5,"epNext":2.2,"status":"a","chance":null},{"id":515,"name":"Maddison","team":19,"pos":3,"cost":65,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.1,"epNext":1.7,"status":"d","chance":75},{"id":516,"name":"Bentancur","team":19,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":517,"name":"Odobert","team":19,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":518,"name":"P.M.Sarr","team":19,"pos":3,"cost":49,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"i","chance":0},{"id":519,"name":"Gallagher","team":19,"pos":3,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.3,"epNext":2.0,"status":"a","chance":null},{"id":520,"name":"Bergvall","team":19,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":521,"name":"Kulusevski","team":19,"pos":3,"cost":65,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":0.0,"status":"i","chance":0},{"id":522,"name":"Gray","team":19,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":523,"name":"Moore","team":19,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.2,"epNext":1.5,"status":"a","chance":null},{"id":524,"name":"Olusesi","team":19,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.8,"epNext":1.0,"status":"a","chance":null},{"id":525,"name":"Fernandes","team":19,"pos":3,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.7,"epNext":2.2,"status":"a","chance":null},{"id":526,"name":"Solanke","team":19,"pos":4,"cost":60,"form":1.0,"totalPts":1,"ppg":1.0,"selected":1.3,"epNext":2.0,"status":"a","chance":null},{"id":527,"name":"Richarlison","team":19,"pos":4,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":2.9,"epNext":2.0,"status":"a","chance":null},{"id":528,"name":"Scarlett","team":19,"pos":4,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":1.7,"epNext":1.0,"status":"a","chance":null},{"id":601,"name":"Williams-Barnett","team":19,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.0,"status":"a","chance":null},{"id":529,"name":"Roefs","team":20,"pos":1,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":4.0,"epNext":2.6,"status":"a","chance":null},{"id":530,"name":"Patterson","team":20,"pos":1,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"u","chance":0},{"id":531,"name":"Ellborg","team":20,"pos":1,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":1.9,"status":"a","chance":null},{"id":532,"name":"Ballard","team":20,"pos":2,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":5.1,"epNext":2.2,"status":"a","chance":null},{"id":533,"name":"Mukiele","team":20,"pos":2,"cost":55,"form":0.0,"totalPts":0,"ppg":0.0,"selected":2.5,"epNext":2.5,"status":"a","chance":100},{"id":534,"name":"Hume","team":20,"pos":2,"cost":45,"form":2.0,"totalPts":2,"ppg":2.0,"selected":6.4,"epNext":1.7,"status":"a","chance":null},{"id":535,"name":"Alderete","team":20,"pos":2,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.5,"epNext":2.2,"status":"a","chance":100},{"id":536,"name":"Reinildo","team":20,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.5,"epNext":1.7,"status":"a","chance":null},{"id":537,"name":"Seelt","team":20,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":538,"name":"Hjelde","team":20,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"u","chance":0},{"id":539,"name":"O'Nien","team":20,"pos":2,"cost":40,"form":1.0,"totalPts":1,"ppg":1.0,"selected":3.4,"epNext":1.0,"status":"a","chance":null},{"id":540,"name":"Masuaku","team":20,"pos":2,"cost":40,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.2,"epNext":0.0,"status":"u","chance":0},{"id":541,"name":"Meunier","team":20,"pos":2,"cost":45,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.3,"epNext":1.7,"status":"a","chance":100},{"id":542,"name":"E.Le F\u00e9e","team":20,"pos":3,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":8.8,"epNext":2.2,"status":"a","chance":null},{"id":543,"name":"Diarra","team":20,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":2.0,"status":"a","chance":null},{"id":544,"name":"Xhaka","team":20,"pos":3,"cost":55,"form":9.0,"totalPts":9,"ppg":9.0,"selected":4.6,"epNext":2.0,"status":"a","chance":null},{"id":545,"name":"Sadiki","team":20,"pos":3,"cost":50,"form":2.0,"totalPts":2,"ppg":2.0,"selected":0.3,"epNext":1.5,"status":"a","chance":null},{"id":546,"name":"Adingra","team":20,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.1,"epNext":0.0,"status":"i","chance":0},{"id":547,"name":"Mundle","team":20,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":548,"name":"Rigg","team":20,"pos":3,"cost":50,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":549,"name":"Talbi","team":20,"pos":3,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.2,"epNext":2.0,"status":"a","chance":null},{"id":550,"name":"Jocelin.T","team":20,"pos":3,"cost":50,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.5,"status":"a","chance":null},{"id":551,"name":"Angulo","team":20,"pos":3,"cost":50,"form":5.0,"totalPts":5,"ppg":5.0,"selected":0.1,"epNext":1.5,"status":"a","chance":null},{"id":552,"name":"Brobbey","team":20,"pos":4,"cost":60,"form":2.0,"totalPts":2,"ppg":2.0,"selected":12.9,"epNext":2.0,"status":"a","chance":null},{"id":553,"name":"Isidor","team":20,"pos":4,"cost":55,"form":1.0,"totalPts":1,"ppg":1.0,"selected":0.9,"epNext":1.8,"status":"a","chance":null},{"id":612,"name":"Methalie","team":20,"pos":2,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.7,"status":"a","chance":null},{"id":613,"name":"Ahoka","team":20,"pos":3,"cost":45,"form":0.0,"totalPts":0,"ppg":0.0,"selected":0.0,"epNext":1.0,"status":"a","chance":null}],"fixturesByTeam":{"1":[{"event":1,"opp":7,"home":true,"diff":2},{"event":2,"opp":2,"home":false,"diff":4},{"event":3,"opp":6,"home":true,"diff":4},{"event":4,"opp":20,"home":false,"diff":3},{"event":5,"opp":5,"home":false,"diff":3},{"event":6,"opp":13,"home":true,"diff":2},{"event":7,"opp":18,"home":false,"diff":3},{"event":8,"opp":9,"home":true,"diff":3},{"event":9,"opp":14,"home":false,"diff":4},{"event":10,"opp":11,"home":true,"diff":2},{"event":11,"opp":17,"home":false,"diff":3},{"event":12,"opp":15,"home":true,"diff":4},{"event":13,"opp":4,"home":false,"diff":3},{"event":14,"opp":19,"home":false,"diff":3},{"event":15,"opp":3,"home":true,"diff":3},{"event":16,"opp":16,"home":true,"diff":4},{"event":17,"opp":8,"home":false,"diff":3},{"event":18,"opp":10,"home":false,"diff":3},{"event":19,"opp":12,"home":true,"diff":2},{"event":20,"opp":4,"home":true,"diff":3},{"event":21,"opp":11,"home":false,"diff":2},{"event":22,"opp":17,"home":true,"diff":2},{"event":23,"opp":15,"home":false,"diff":5},{"event":24,"opp":14,"home":true,"diff":4},{"event":25,"opp":12,"home":false,"diff":2},{"event":26,"opp":10,"home":true,"diff":2},{"event":27,"opp":16,"home":false,"diff":4},{"event":28,"opp":8,"home":true,"diff":3},{"event":29,"opp":6,"home":false,"diff":4},{"event":30,"opp":20,"home":true,"diff":2},{"event":31,"opp":7,"home":false,"diff":2},{"event":32,"opp":2,"home":true,"diff":3},{"event":33,"opp":3,"home":false,"diff":3},{"event":34,"opp":19,"home":true,"diff":3},{"event":35,"opp":13,"home":false,"diff":3},{"event":36,"opp":18,"home":true,"diff":3},{"event":37,"opp":9,"home":false,"diff":3},{"event":38,"opp":5,"home":true,"diff":2}],"7":[{"event":1,"opp":1,"home":false,"diff":5},{"event":2,"opp":11,"home":true,"diff":2},{"event":3,"opp":15,"home":false,"diff":5},{"event":4,"opp":5,"home":true,"diff":2},{"event":5,"opp":18,"home":false,"diff":3},{"event":6,"opp":17,"home":true,"diff":2},{"event":7,"opp":19,"home":false,"diff":3},{"event":8,"opp":10,"home":true,"diff":2},{"event":9,"opp":20,"home":true,"diff":2},{"event":10,"opp":9,"home":false,"diff":3},{"event":11,"opp":8,"home":true,"diff":3},{"event":12,"opp":13,"home":false,"diff":3},{"event":13,"opp":12,"home":true,"diff":2},{"event":14,"opp":16,"home":false,"diff":4},{"event":15,"opp":2,"home":true,"diff":3},{"event":16,"opp":3,"home":false,"diff":3},{"event":17,"opp":6,"home":true,"diff":4},{"event":18,"opp":4,"home":true,"diff":3},{"event":19,"opp":14,"home":false,"diff":4},{"event":20,"opp":12,"home":false,"diff":2},{"event":21,"opp":9,"home":true,"diff":3},{"event":22,"opp":20,"home":false,"diff":3},{"event":23,"opp":13,"home":true,"diff":2},{"event":24,"opp":8,"home":false,"diff":3},{"event":25,"opp":14,"home":true,"diff":4},{"event":26,"opp":4,"home":false,"diff":3},{"event":27,"opp":3,"home":true,"diff":3},{"event":28,"opp":6,"home":false,"diff":4},{"event":29,"opp":15,"home":true,"diff":4},{"event":30,"opp":5,"home":false,"diff":3},{"event":31,"opp":1,"home":true,"diff":4},{"event":32,"opp":11,"home":false,"diff":2},{"event":33,"opp":2,"home":false,"diff":4},{"event":34,"opp":16,"home":true,"diff":4},{"event":35,"opp":17,"home":false,"diff":3},{"event":36,"opp":19,"home":true,"diff":3},{"event":37,"opp":10,"home":false,"diff":3},{"event":38,"opp":18,"home":true,"diff":3}],"11":[{"event":1,"opp":16,"home":true,"diff":4},{"event":2,"opp":7,"home":false,"diff":2},{"event":3,"opp":2,"home":true,"diff":3},{"event":4,"opp":6,"home":false,"diff":4},{"event":5,"opp":17,"home":false,"diff":3},{"event":6,"opp":9,"home":true,"diff":3},{"event":7,"opp":10,"home":false,"diff":3},{"event":8,"opp":4,"home":true,"diff":3},{"event":9,"opp":12,"home":true,"diff":2},{"event":10,"opp":1,"home":false,"diff":5},{"event":11,"opp":5,"home":true,"diff":2},{"event":12,"opp":8,"home":false,"diff":3},{"event":13,"opp":18,"home":true,"diff":3},{"event":14,"opp":3,"home":false,"diff":3},{"event":15,"opp":19,"home":true,"diff":3},{"event":16,"opp":15,"home":false,"diff":5},{"event":17,"opp":14,"home":true,"diff":4},{"event":18,"opp":13,"home":true,"diff":2},{"event":19,"opp":20,"home":false,"diff":3},{"event":20,"opp":18,"home":false,"diff":3},{"event":21,"opp":1,"home":true,"diff":4},{"event":22,"opp":12,"home":false,"diff":2},{"event":23,"opp":8,"home":true,"diff":3},{"event":24,"opp":5,"home":false,"diff":3},{"event":25,"opp":20,"home":true,"diff":2},{"event":26,"opp":14,"home":false,"diff":4},{"event":27,"opp":15,"home":true,"diff":4},{"event":28,"opp":13,"home":false,"diff":3},{"event":29,"opp":2,"home":false,"diff":4},{"event":30,"opp":6,"home":true,"diff":4},{"event":31,"opp":16,"home":false,"diff":4},{"event":32,"opp":7,"home":true,"diff":2},{"event":33,"opp":19,"home":false,"diff":3},{"event":34,"opp":3,"home":true,"diff":3},{"event":35,"opp":9,"home":false,"diff":3},{"event":36,"opp":10,"home":true,"diff":2},{"event":37,"opp":4,"home":false,"diff":3},{"event":38,"opp":17,"home":true,"diff":2}],"16":[{"event":1,"opp":11,"home":false,"diff":2},{"event":2,"opp":12,"home":true,"diff":2},{"event":3,"opp":9,"home":false,"diff":3},{"event":4,"opp":15,"home":true,"diff":4},{"event":5,"opp":10,"home":false,"diff":3},{"event":6,"opp":19,"home":true,"diff":3},{"event":7,"opp":13,"home":false,"diff":3},{"event":8,"opp":3,"home":true,"diff":3},{"event":9,"opp":6,"home":false,"diff":4},{"event":10,"opp":2,"home":true,"diff":3},{"event":11,"opp":14,"home":false,"diff":4},{"event":12,"opp":4,"home":true,"diff":3},{"event":13,"opp":17,"home":false,"diff":3},{"event":14,"opp":7,"home":true,"diff":2},{"event":15,"opp":8,"home":false,"diff":3},{"event":16,"opp":1,"home":false,"diff":5},{"event":17,"opp":18,"home":true,"diff":3},{"event":18,"opp":20,"home":true,"diff":2},{"event":19,"opp":5,"home":false,"diff":3},{"event":20,"opp":17,"home":true,"diff":2},{"event":21,"opp":2,"home":false,"diff":4},{"event":22,"opp":14,"home":true,"diff":4},{"event":23,"opp":4,"home":false,"diff":3},{"event":24,"opp":6,"home":true,"diff":4},{"event":25,"opp":5,"home":true,"diff":2},{"event":26,"opp":18,"home":false,"diff":3},{"event":27,"opp":1,"home":true,"diff":4},{"event":28,"opp":20,"home":false,"diff":3},{"event":29,"opp":9,"home":true,"diff":3},{"event":30,"opp":15,"home":false,"diff":5},{"event":31,"opp":11,"home":true,"diff":2},{"event":32,"opp":12,"home":false,"diff":2},{"event":33,"opp":8,"home":true,"diff":3},{"event":34,"opp":7,"home":false,"diff":2},{"event":35,"opp":3,"home":false,"diff":3},{"event":36,"opp":13,"home":true,"diff":2},{"event":37,"opp":19,"home":false,"diff":3},{"event":38,"opp":10,"home":true,"diff":2}],"9":[{"event":1,"opp":8,"home":true,"diff":3},{"event":2,"opp":3,"home":false,"diff":3},{"event":3,"opp":16,"home":true,"diff":4},{"event":4,"opp":19,"home":false,"diff":3},{"event":5,"opp":12,"home":true,"diff":2},{"event":6,"opp":11,"home":false,"diff":2},{"event":7,"opp":6,"home":true,"diff":4},{"event":8,"opp":1,"home":false,"diff":5},{"event":9,"opp":17,"home":false,"diff":3},{"event":10,"opp":7,"home":true,"diff":2},{"event":11,"opp":4,"home":false,"diff":3},{"event":12,"opp":14,"home":true,"diff":4},{"event":13,"opp":2,"home":false,"diff":4},{"event":14,"opp":10,"home":true,"diff":2},{"event":15,"opp":5,"home":false,"diff":3},{"event":16,"opp":18,"home":false,"diff":3},{"event":17,"opp":20,"home":true,"diff":2},{"event":18,"opp":15,"home":true,"diff":4},{"event":19,"opp":13,"home":false,"diff":3},{"event":20,"opp":2,"home":true,"diff":3},{"event":21,"opp":7,"home":false,"diff":2},{"event":22,"opp":4,"home":true,"diff":3},{"event":23,"opp":14,"home":false,"diff":4},{"event":24,"opp":17,"home":true,"diff":2},{"event":25,"opp":13,"home":true,"diff":2},{"event":26,"opp":20,"home":false,"diff":3},{"event":27,"opp":18,"home":true,"diff":3},{"event":28,"opp":15,"home":false,"diff":5},{"event":29,"opp":16,"home":false,"diff":4},{"event":30,"opp":19,"home":true,"diff":3},{"event":31,"opp":8,"home":false,"diff":3},{"event":32,"opp":3,"home":true,"diff":3},{"event":33,"opp":5,"home":true,"diff":2},{"event":34,"opp":10,"home":false,"diff":3},{"event":35,"opp":11,"home":true,"diff":2},{"event":36,"opp":6,"home":false,"diff":4},{"event":37,"opp":1,"home":true,"diff":4},{"event":38,"opp":12,"home":false,"diff":2}],"8":[{"event":1,"opp":9,"home":false,"diff":3},{"event":2,"opp":15,"home":true,"diff":4},{"event":3,"opp":10,"home":false,"diff":3},{"event":4,"opp":12,"home":true,"diff":2},{"event":5,"opp":13,"home":false,"diff":3},{"event":6,"opp":18,"home":true,"diff":3},{"event":7,"opp":5,"home":false,"diff":3},{"event":8,"opp":17,"home":true,"diff":2},{"event":9,"opp":19,"home":false,"diff":3},{"event":10,"opp":14,"home":true,"diff":4},{"event":11,"opp":7,"home":false,"diff":2},{"event":12,"opp":11,"home":true,"diff":2},{"event":13,"opp":6,"home":false,"diff":4},{"event":14,"opp":2,"home":false,"diff":4},{"event":15,"opp":16,"home":true,"diff":4},{"event":16,"opp":20,"home":false,"diff":3},{"event":17,"opp":1,"home":true,"diff":4},{"event":18,"opp":3,"home":true,"diff":3},{"event":19,"opp":4,"home":false,"diff":3},{"event":20,"opp":6,"home":true,"diff":4},{"event":21,"opp":14,"home":false,"diff":4},{"event":22,"opp":19,"home":true,"diff":3},{"event":23,"opp":11,"home":false,"diff":2},{"event":24,"opp":7,"home":true,"diff":2},{"event":25,"opp":4,"home":true,"diff":3},{"event":26,"opp":3,"home":false,"diff":3},{"event":27,"opp":20,"home":true,"diff":2},{"event":28,"opp":1,"home":false,"diff":5},{"event":29,"opp":10,"home":true,"diff":2},{"event":30,"opp":12,"home":false,"diff":2},{"event":31,"opp":9,"home":true,"diff":3},{"event":32,"opp":15,"home":false,"diff":5},{"event":33,"opp":16,"home":false,"diff":4},{"event":34,"opp":2,"home":true,"diff":3},{"event":35,"opp":18,"home":false,"diff":3},{"event":36,"opp":5,"home":true,"diff":2},{"event":37,"opp":17,"home":false,"diff":3},{"event":38,"opp":13,"home":true,"diff":2}],"12":[{"event":1,"opp":20,"home":true,"diff":2},{"event":2,"opp":16,"home":false,"diff":4},{"event":3,"opp":14,"home":true,"diff":4},{"event":4,"opp":8,"home":false,"diff":3},{"event":5,"opp":9,"home":false,"diff":3},{"event":6,"opp":10,"home":true,"diff":2},{"event":7,"opp":15,"home":false,"diff":5},{"event":8,"opp":18,"home":true,"diff":3},{"event":9,"opp":11,"home":false,"diff":2},{"event":10,"opp":3,"home":true,"diff":3},{"event":11,"opp":19,"home":false,"diff":3},{"event":12,"opp":2,"home":true,"diff":3},{"event":13,"opp":7,"home":false,"diff":2},{"event":14,"opp":13,"home":false,"diff":3},{"event":15,"opp":17,"home":true,"diff":2},{"event":16,"opp":5,"home":false,"diff":3},{"event":17,"opp":4,"home":true,"diff":3},{"event":18,"opp":6,"home":true,"diff":4},{"event":19,"opp":1,"home":false,"diff":5},{"event":20,"opp":7,"home":true,"diff":2},{"event":21,"opp":3,"home":false,"diff":3},{"event":22,"opp":11,"home":true,"diff":2},{"event":23,"opp":2,"home":false,"diff":4},{"event":24,"opp":19,"home":true,"diff":3},{"event":25,"opp":1,"home":true,"diff":4},{"event":26,"opp":6,"home":false,"diff":4},{"event":27,"opp":5,"home":true,"diff":2},{"event":28,"opp":4,"home":false,"diff":3},{"event":29,"opp":14,"home":false,"diff":4},{"event":30,"opp":8,"home":true,"diff":3},{"event":31,"opp":20,"home":false,"diff":3},{"event":32,"opp":16,"home":true,"diff":4},{"event":33,"opp":17,"home":false,"diff":3},{"event":34,"opp":13,"home":true,"diff":2},{"event":35,"opp":10,"home":false,"diff":3},{"event":36,"opp":15,"home":true,"diff":4},{"event":37,"opp":18,"home":false,"diff":3},{"event":38,"opp":9,"home":true,"diff":3}],"20":[{"event":1,"opp":12,"home":false,"diff":2},{"event":2,"opp":10,"home":true,"diff":2},{"event":3,"opp":4,"home":false,"diff":3},{"event":4,"opp":1,"home":true,"diff":4},{"event":5,"opp":15,"home":false,"diff":5},{"event":6,"opp":5,"home":true,"diff":2},{"event":7,"opp":3,"home":false,"diff":3},{"event":8,"opp":13,"home":true,"diff":2},{"event":9,"opp":7,"home":false,"diff":2},{"event":10,"opp":6,"home":true,"diff":4},{"event":11,"opp":2,"home":false,"diff":4},{"event":12,"opp":19,"home":true,"diff":3},{"event":13,"opp":14,"home":false,"diff":4},{"event":14,"opp":17,"home":false,"diff":3},{"event":15,"opp":18,"home":true,"diff":3},{"event":16,"opp":8,"home":true,"diff":3},{"event":17,"opp":9,"home":false,"diff":3},{"event":18,"opp":16,"home":false,"diff":4},{"event":19,"opp":11,"home":true,"diff":2},{"event":20,"opp":14,"home":true,"diff":4},{"event":21,"opp":6,"home":false,"diff":4},{"event":22,"opp":7,"home":true,"diff":2},{"event":23,"opp":19,"home":false,"diff":3},{"event":24,"opp":2,"home":true,"diff":3},{"event":25,"opp":11,"home":false,"diff":2},{"event":26,"opp":9,"home":true,"diff":3},{"event":27,"opp":8,"home":false,"diff":3},{"event":28,"opp":16,"home":true,"diff":4},{"event":29,"opp":4,"home":true,"diff":3},{"event":30,"opp":1,"home":false,"diff":5},{"event":31,"opp":12,"home":true,"diff":2},{"event":32,"opp":10,"home":false,"diff":3},{"event":33,"opp":18,"home":false,"diff":3},{"event":34,"opp":17,"home":true,"diff":2},{"event":35,"opp":5,"home":false,"diff":3},{"event":36,"opp":3,"home":true,"diff":3},{"event":37,"opp":13,"home":false,"diff":3},{"event":38,"opp":15,"home":true,"diff":4}],"18":[{"event":1,"opp":13,"home":true,"diff":2},{"event":2,"opp":14,"home":false,"diff":4},{"event":3,"opp":19,"home":true,"diff":3},{"event":4,"opp":2,"home":false,"diff":4},{"event":5,"opp":7,"home":true,"diff":2},{"event":6,"opp":8,"home":false,"diff":3},{"event":7,"opp":1,"home":true,"diff":4},{"event":8,"opp":12,"home":false,"diff":2},{"event":9,"opp":4,"home":false,"diff":3},{"event":10,"opp":15,"home":true,"diff":4},{"event":11,"opp":3,"home":false,"diff":3},{"event":12,"opp":6,"home":true,"diff":4},{"event":13,"opp":11,"home":false,"diff":2},{"event":14,"opp":5,"home":true,"diff":2},{"event":15,"opp":20,"home":false,"diff":3},{"event":16,"opp":9,"home":true,"diff":3},{"event":17,"opp":16,"home":false,"diff":4},{"event":18,"opp":17,"home":false,"diff":3},{"event":19,"opp":10,"home":true,"diff":2},{"event":20,"opp":11,"home":true,"diff":2},{"event":21,"opp":15,"home":false,"diff":5},{"event":22,"opp":3,"home":true,"diff":3},{"event":23,"opp":6,"home":false,"diff":4},{"event":24,"opp":4,"home":true,"diff":3},{"event":25,"opp":10,"home":false,"diff":3},{"event":26,"opp":16,"home":true,"diff":4},{"event":27,"opp":9,"home":false,"diff":3},{"event":28,"opp":17,"home":true,"diff":2},{"event":29,"opp":19,"home":false,"diff":3},{"event":30,"opp":2,"home":true,"diff":3},{"event":31,"opp":13,"home":false,"diff":3},{"event":32,"opp":14,"home":true,"diff":4},{"event":33,"opp":20,"home":true,"diff":2},{"event":34,"opp":5,"home":false,"diff":3},{"event":35,"opp":8,"home":true,"diff":3},{"event":36,"opp":1,"home":false,"diff":5},{"event":37,"opp":12,"home":true,"diff":2},{"event":38,"opp":7,"home":false,"diff":2}],"13":[{"event":1,"opp":18,"home":false,"diff":3},{"event":2,"opp":4,"home":true,"diff":3},{"event":3,"opp":5,"home":false,"diff":3},{"event":4,"opp":17,"home":true,"diff":2},{"event":5,"opp":8,"home":true,"diff":3},{"event":6,"opp":1,"home":false,"diff":5},{"event":7,"opp":16,"home":true,"diff":4},{"event":8,"opp":20,"home":false,"diff":3},{"event":9,"opp":3,"home":false,"diff":3},{"event":10,"opp":19,"home":true,"diff":3},{"event":11,"opp":6,"home":false,"diff":4},{"event":12,"opp":7,"home":true,"diff":2},{"event":13,"opp":15,"home":false,"diff":5},{"event":14,"opp":12,"home":true,"diff":2},{"event":15,"opp":14,"home":false,"diff":4},{"event":16,"opp":10,"home":true,"diff":2},{"event":17,"opp":2,"home":false,"diff":4},{"event":18,"opp":11,"home":false,"diff":2},{"event":19,"opp":9,"home":true,"diff":3},{"event":20,"opp":15,"home":true,"diff":4},{"event":21,"opp":19,"home":false,"diff":3},{"event":22,"opp":6,"home":true,"diff":4},{"event":23,"opp":7,"home":false,"diff":2},{"event":24,"opp":3,"home":true,"diff":3},{"event":25,"opp":9,"home":false,"diff":3},{"event":26,"opp":2,"home":true,"diff":3},{"event":27,"opp":10,"home":false,"diff":3},{"event":28,"opp":11,"home":true,"diff":2},{"event":29,"opp":5,"home":true,"diff":2},{"event":30,"opp":17,"home":false,"diff":3},{"event":31,"opp":18,"home":true,"diff":3},{"event":32,"opp":4,"home":false,"diff":3},{"event":33,"opp":14,"home":true,"diff":4},{"event":34,"opp":12,"home":false,"diff":2},{"event":35,"opp":1,"home":true,"diff":4},{"event":36,"opp":16,"home":false,"diff":4},{"event":37,"opp":20,"home":true,"diff":2},{"event":38,"opp":8,"home":false,"diff":3}],"4":[{"event":1,"opp":19,"home":true,"diff":3},{"event":2,"opp":13,"home":false,"diff":3},{"event":3,"opp":20,"home":true,"diff":2},{"event":4,"opp":3,"home":false,"diff":3},{"event":5,"opp":6,"home":true,"diff":4},{"event":6,"opp":2,"home":false,"diff":4},{"event":7,"opp":14,"home":true,"diff":4},{"event":8,"opp":11,"home":false,"diff":2},{"event":9,"opp":18,"home":true,"diff":3},{"event":10,"opp":5,"home":false,"diff":3},{"event":11,"opp":9,"home":true,"diff":3},{"event":12,"opp":16,"home":false,"diff":4},{"event":13,"opp":1,"home":true,"diff":4},{"event":14,"opp":15,"home":true,"diff":4},{"event":15,"opp":10,"home":false,"diff":3},{"event":16,"opp":17,"home":true,"diff":2},{"event":17,"opp":12,"home":false,"diff":2},{"event":18,"opp":7,"home":false,"diff":2},{"event":19,"opp":8,"home":true,"diff":3},{"event":20,"opp":1,"home":false,"diff":5},{"event":21,"opp":5,"home":true,"diff":2},{"event":22,"opp":9,"home":false,"diff":3},{"event":23,"opp":16,"home":true,"diff":4},{"event":24,"opp":18,"home":false,"diff":3},{"event":25,"opp":8,"home":false,"diff":3},{"event":26,"opp":7,"home":true,"diff":2},{"event":27,"opp":17,"home":false,"diff":3},{"event":28,"opp":12,"home":true,"diff":2},{"event":29,"opp":20,"home":false,"diff":3},{"event":30,"opp":3,"home":true,"diff":3},{"event":31,"opp":19,"home":false,"diff":3},{"event":32,"opp":13,"home":true,"diff":2},{"event":33,"opp":10,"home":true,"diff":2},{"event":34,"opp":15,"home":false,"diff":5},{"event":35,"opp":2,"home":true,"diff":3},{"event":36,"opp":14,"home":false,"diff":4},{"event":37,"opp":11,"home":true,"diff":2},{"event":38,"opp":6,"home":false,"diff":4}],"19":[{"event":1,"opp":4,"home":false,"diff":3},{"event":2,"opp":17,"home":true,"diff":2},{"event":3,"opp":18,"home":false,"diff":3},{"event":4,"opp":9,"home":true,"diff":3},{"event":5,"opp":2,"home":true,"diff":3},{"event":6,"opp":16,"home":false,"diff":4},{"event":7,"opp":7,"home":true,"diff":2},{"event":8,"opp":6,"home":false,"diff":4},{"event":9,"opp":8,"home":true,"diff":3},{"event":10,"opp":13,"home":false,"diff":3},{"event":11,"opp":12,"home":true,"diff":2},{"event":12,"opp":20,"home":false,"diff":3},{"event":13,"opp":10,"home":true,"diff":2},{"event":14,"opp":1,"home":true,"diff":4},{"event":15,"opp":11,"home":false,"diff":2},{"event":16,"opp":14,"home":false,"diff":4},{"event":17,"opp":3,"home":true,"diff":3},{"event":18,"opp":5,"home":true,"diff":2},{"event":19,"opp":15,"home":false,"diff":5},{"event":20,"opp":10,"home":false,"diff":3},{"event":21,"opp":13,"home":true,"diff":2},{"event":22,"opp":8,"home":false,"diff":3},{"event":23,"opp":20,"home":true,"diff":2},{"event":24,"opp":12,"home":false,"diff":2},{"event":25,"opp":15,"home":true,"diff":4},{"event":26,"opp":5,"home":false,"diff":3},{"event":27,"opp":14,"home":true,"diff":4},{"event":28,"opp":3,"home":false,"diff":3},{"event":29,"opp":18,"home":true,"diff":3},{"event":30,"opp":9,"home":false,"diff":3},{"event":31,"opp":4,"home":true,"diff":3},{"event":32,"opp":17,"home":false,"diff":3},{"event":33,"opp":11,"home":true,"diff":2},{"event":34,"opp":1,"home":false,"diff":5},{"event":35,"opp":6,"home":true,"diff":4},{"event":36,"opp":7,"home":false,"diff":2},{"event":37,"opp":16,"home":true,"diff":4},{"event":38,"opp":2,"home":false,"diff":4}],"5":[{"event":1,"opp":2,"home":true,"diff":3},{"event":2,"opp":6,"home":false,"diff":4},{"event":3,"opp":13,"home":true,"diff":2},{"event":4,"opp":7,"home":false,"diff":2},{"event":5,"opp":1,"home":true,"diff":4},{"event":6,"opp":20,"home":false,"diff":3},{"event":7,"opp":8,"home":true,"diff":3},{"event":8,"opp":14,"home":false,"diff":4},{"event":9,"opp":15,"home":false,"diff":5},{"event":10,"opp":4,"home":true,"diff":3},{"event":11,"opp":11,"home":false,"diff":2},{"event":12,"opp":17,"home":true,"diff":2},{"event":13,"opp":3,"home":false,"diff":3},{"event":14,"opp":18,"home":false,"diff":3},{"event":15,"opp":9,"home":true,"diff":3},{"event":16,"opp":12,"home":true,"diff":2},{"event":17,"opp":10,"home":false,"diff":3},{"event":18,"opp":19,"home":false,"diff":3},{"event":19,"opp":16,"home":true,"diff":4},{"event":20,"opp":3,"home":true,"diff":3},{"event":21,"opp":4,"home":false,"diff":3},{"event":22,"opp":15,"home":true,"diff":4},{"event":23,"opp":17,"home":false,"diff":3},{"event":24,"opp":11,"home":true,"diff":2},{"event":25,"opp":16,"home":false,"diff":4},{"event":26,"opp":19,"home":true,"diff":3},{"event":27,"opp":12,"home":false,"diff":2},{"event":28,"opp":10,"home":true,"diff":2},{"event":29,"opp":13,"home":false,"diff":3},{"event":30,"opp":7,"home":true,"diff":2},{"event":31,"opp":2,"home":false,"diff":4},{"event":32,"opp":6,"home":true,"diff":4},{"event":33,"opp":9,"home":false,"diff":3},{"event":34,"opp":18,"home":true,"diff":3},{"event":35,"opp":20,"home":true,"diff":2},{"event":36,"opp":8,"home":false,"diff":3},{"event":37,"opp":14,"home":true,"diff":4},{"event":38,"opp":1,"home":false,"diff":5}],"2":[{"event":1,"opp":5,"home":false,"diff":3},{"event":2,"opp":1,"home":true,"diff":4},{"event":3,"opp":11,"home":false,"diff":2},{"event":4,"opp":18,"home":true,"diff":3},{"event":5,"opp":19,"home":false,"diff":3},{"event":6,"opp":4,"home":true,"diff":3},{"event":7,"opp":17,"home":false,"diff":3},{"event":8,"opp":15,"home":true,"diff":4},{"event":9,"opp":10,"home":true,"diff":2},{"event":10,"opp":16,"home":false,"diff":4},{"event":11,"opp":20,"home":true,"diff":2},{"event":12,"opp":12,"home":false,"diff":2},{"event":13,"opp":9,"home":true,"diff":3},{"event":14,"opp":8,"home":true,"diff":3},{"event":15,"opp":7,"home":false,"diff":2},{"event":16,"opp":6,"home":false,"diff":4},{"event":17,"opp":13,"home":true,"diff":2},{"event":18,"opp":14,"home":true,"diff":4},{"event":19,"opp":3,"home":false,"diff":3},{"event":20,"opp":9,"home":false,"diff":3},{"event":21,"opp":16,"home":true,"diff":4},{"event":22,"opp":10,"home":false,"diff":3},{"event":23,"opp":12,"home":true,"diff":2},{"event":24,"opp":20,"home":false,"diff":3},{"event":25,"opp":3,"home":true,"diff":3},{"event":26,"opp":13,"home":false,"diff":3},{"event":27,"opp":6,"home":true,"diff":4},{"event":28,"opp":14,"home":false,"diff":4},{"event":29,"opp":11,"home":true,"diff":2},{"event":30,"opp":18,"home":false,"diff":3},{"event":31,"opp":5,"home":true,"diff":2},{"event":32,"opp":1,"home":false,"diff":5},{"event":33,"opp":7,"home":true,"diff":2},{"event":34,"opp":8,"home":false,"diff":3},{"event":35,"opp":4,"home":false,"diff":3},{"event":36,"opp":17,"home":true,"diff":2},{"event":37,"opp":15,"home":false,"diff":5},{"event":38,"opp":19,"home":true,"diff":3}],"15":[{"event":1,"opp":3,"home":true,"diff":3},{"event":2,"opp":8,"home":false,"diff":3},{"event":3,"opp":7,"home":true,"diff":2},{"event":4,"opp":16,"home":false,"diff":4},{"event":5,"opp":20,"home":true,"diff":2},{"event":6,"opp":14,"home":false,"diff":4},{"event":7,"opp":12,"home":true,"diff":2},{"event":8,"opp":2,"home":false,"diff":4},{"event":9,"opp":5,"home":true,"diff":2},{"event":10,"opp":18,"home":false,"diff":3},{"event":11,"opp":10,"home":true,"diff":2},{"event":12,"opp":1,"home":false,"diff":5},{"event":13,"opp":13,"home":true,"diff":2},{"event":14,"opp":4,"home":false,"diff":3},{"event":15,"opp":6,"home":true,"diff":4},{"event":16,"opp":11,"home":true,"diff":2},{"event":17,"opp":17,"home":false,"diff":3},{"event":18,"opp":9,"home":false,"diff":3},{"event":19,"opp":19,"home":true,"diff":3},{"event":20,"opp":13,"home":false,"diff":3},{"event":21,"opp":18,"home":true,"diff":3},{"event":22,"opp":5,"home":false,"diff":3},{"event":23,"opp":1,"home":true,"diff":4},{"event":24,"opp":10,"home":false,"diff":3},{"event":25,"opp":19,"home":false,"diff":3},{"event":26,"opp":17,"home":true,"diff":2},{"event":27,"opp":11,"home":false,"diff":2},{"event":28,"opp":9,"home":true,"diff":3},{"event":29,"opp":7,"home":false,"diff":2},{"event":30,"opp":16,"home":true,"diff":4},{"event":31,"opp":3,"home":false,"diff":3},{"event":32,"opp":8,"home":true,"diff":3},{"event":33,"opp":6,"home":false,"diff":4},{"event":34,"opp":4,"home":true,"diff":3},{"event":35,"opp":14,"home":true,"diff":4},{"event":36,"opp":12,"home":false,"diff":2},{"event":37,"opp":2,"home":true,"diff":3},{"event":38,"opp":20,"home":false,"diff":3}],"3":[{"event":1,"opp":15,"home":false,"diff":5},{"event":2,"opp":9,"home":true,"diff":3},{"event":3,"opp":17,"home":false,"diff":3},{"event":4,"opp":4,"home":true,"diff":3},{"event":5,"opp":14,"home":true,"diff":4},{"event":6,"opp":6,"home":false,"diff":4},{"event":7,"opp":20,"home":true,"diff":2},{"event":8,"opp":16,"home":false,"diff":4},{"event":9,"opp":13,"home":true,"diff":2},{"event":10,"opp":12,"home":false,"diff":2},{"event":11,"opp":18,"home":true,"diff":3},{"event":12,"opp":10,"home":false,"diff":3},{"event":13,"opp":5,"home":true,"diff":2},{"event":14,"opp":11,"home":true,"diff":2},{"event":15,"opp":1,"home":false,"diff":5},{"event":16,"opp":7,"home":true,"diff":2},{"event":17,"opp":19,"home":false,"diff":3},{"event":18,"opp":8,"home":false,"diff":3},{"event":19,"opp":2,"home":true,"diff":3},{"event":20,"opp":5,"home":false,"diff":3},{"event":21,"opp":12,"home":true,"diff":2},{"event":22,"opp":18,"home":false,"diff":3},{"event":23,"opp":10,"home":true,"diff":2},{"event":24,"opp":13,"home":false,"diff":3},{"event":25,"opp":2,"home":false,"diff":4},{"event":26,"opp":8,"home":true,"diff":3},{"event":27,"opp":7,"home":false,"diff":2},{"event":28,"opp":19,"home":true,"diff":3},{"event":29,"opp":17,"home":true,"diff":2},{"event":30,"opp":4,"home":false,"diff":3},{"event":31,"opp":15,"home":true,"diff":4},{"event":32,"opp":9,"home":false,"diff":3},{"event":33,"opp":1,"home":true,"diff":4},{"event":34,"opp":11,"home":false,"diff":2},{"event":35,"opp":16,"home":true,"diff":4},{"event":36,"opp":20,"home":false,"diff":3},{"event":37,"opp":6,"home":true,"diff":4},{"event":38,"opp":14,"home":false,"diff":4}],"17":[{"event":1,"opp":14,"home":true,"diff":4},{"event":2,"opp":19,"home":false,"diff":3},{"event":3,"opp":3,"home":true,"diff":3},{"event":4,"opp":13,"home":false,"diff":3},{"event":5,"opp":11,"home":true,"diff":2},{"event":6,"opp":7,"home":false,"diff":2},{"event":7,"opp":2,"home":true,"diff":3},{"event":8,"opp":8,"home":false,"diff":3},{"event":9,"opp":9,"home":true,"diff":3},{"event":10,"opp":10,"home":false,"diff":3},{"event":11,"opp":1,"home":true,"diff":4},{"event":12,"opp":5,"home":false,"diff":3},{"event":13,"opp":16,"home":true,"diff":4},{"event":14,"opp":20,"home":true,"diff":2},{"event":15,"opp":12,"home":false,"diff":2},{"event":16,"opp":4,"home":false,"diff":3},{"event":17,"opp":15,"home":true,"diff":4},{"event":18,"opp":18,"home":true,"diff":3},{"event":19,"opp":6,"home":false,"diff":4},{"event":20,"opp":16,"home":false,"diff":4},{"event":21,"opp":10,"home":true,"diff":2},{"event":22,"opp":1,"home":false,"diff":5},{"event":23,"opp":5,"home":true,"diff":2},{"event":24,"opp":9,"home":false,"diff":3},{"event":25,"opp":6,"home":true,"diff":4},{"event":26,"opp":15,"home":false,"diff":5},{"event":27,"opp":4,"home":true,"diff":3},{"event":28,"opp":18,"home":false,"diff":3},{"event":29,"opp":3,"home":false,"diff":3},{"event":30,"opp":13,"home":true,"diff":2},{"event":31,"opp":14,"home":false,"diff":4},{"event":32,"opp":19,"home":true,"diff":3},{"event":33,"opp":12,"home":true,"diff":2},{"event":34,"opp":20,"home":false,"diff":3},{"event":35,"opp":7,"home":true,"diff":2},{"event":36,"opp":2,"home":false,"diff":4},{"event":37,"opp":8,"home":true,"diff":3},{"event":38,"opp":11,"home":false,"diff":2}],"14":[{"event":1,"opp":17,"home":false,"diff":3},{"event":2,"opp":18,"home":true,"diff":3},{"event":3,"opp":12,"home":false,"diff":2},{"event":4,"opp":10,"home":true,"diff":2},{"event":5,"opp":3,"home":false,"diff":3},{"event":6,"opp":15,"home":true,"diff":4},{"event":7,"opp":4,"home":false,"diff":3},{"event":8,"opp":5,"home":true,"diff":2},{"event":9,"opp":1,"home":true,"diff":4},{"event":10,"opp":8,"home":false,"diff":3},{"event":11,"opp":16,"home":true,"diff":4},{"event":12,"opp":9,"home":false,"diff":3},{"event":13,"opp":20,"home":true,"diff":2},{"event":14,"opp":6,"home":false,"diff":4},{"event":15,"opp":13,"home":true,"diff":2},{"event":16,"opp":19,"home":true,"diff":3},{"event":17,"opp":11,"home":false,"diff":2},{"event":18,"opp":2,"home":false,"diff":4},{"event":19,"opp":7,"home":true,"diff":2},{"event":20,"opp":20,"home":false,"diff":3},{"event":21,"opp":8,"home":true,"diff":3},{"event":22,"opp":16,"home":false,"diff":4},{"event":23,"opp":9,"home":true,"diff":3},{"event":24,"opp":1,"home":false,"diff":5},{"event":25,"opp":7,"home":false,"diff":2},{"event":26,"opp":11,"home":true,"diff":2},{"event":27,"opp":19,"home":false,"diff":3},{"event":28,"opp":2,"home":true,"diff":3},{"event":29,"opp":12,"home":true,"diff":2},{"event":30,"opp":10,"home":false,"diff":3},{"event":31,"opp":17,"home":true,"diff":2},{"event":32,"opp":18,"home":false,"diff":3},{"event":33,"opp":13,"home":false,"diff":3},{"event":34,"opp":6,"home":true,"diff":4},{"event":35,"opp":15,"home":false,"diff":5},{"event":36,"opp":4,"home":true,"diff":3},{"event":37,"opp":5,"home":false,"diff":3},{"event":38,"opp":3,"home":true,"diff":3}],"10":[{"event":1,"opp":6,"home":true,"diff":4},{"event":2,"opp":20,"home":false,"diff":3},{"event":3,"opp":8,"home":true,"diff":3},{"event":4,"opp":14,"home":false,"diff":4},{"event":5,"opp":16,"home":true,"diff":4},{"event":6,"opp":12,"home":false,"diff":2},{"event":7,"opp":11,"home":true,"diff":2},{"event":8,"opp":7,"home":false,"diff":2},{"event":9,"opp":2,"home":false,"diff":4},{"event":10,"opp":17,"home":true,"diff":2},{"event":11,"opp":15,"home":false,"diff":5},{"event":12,"opp":3,"home":true,"diff":3},{"event":13,"opp":19,"home":false,"diff":3},{"event":14,"opp":9,"home":false,"diff":3},{"event":15,"opp":4,"home":true,"diff":3},{"event":16,"opp":13,"home":false,"diff":3},{"event":17,"opp":5,"home":true,"diff":2},{"event":18,"opp":1,"home":true,"diff":4},{"event":19,"opp":18,"home":false,"diff":3},{"event":20,"opp":19,"home":true,"diff":3},{"event":21,"opp":17,"home":false,"diff":3},{"event":22,"opp":2,"home":true,"diff":3},{"event":23,"opp":3,"home":false,"diff":3},{"event":24,"opp":15,"home":true,"diff":4},{"event":25,"opp":18,"home":true,"diff":3},{"event":26,"opp":1,"home":false,"diff":5},{"event":27,"opp":13,"home":true,"diff":2},{"event":28,"opp":5,"home":false,"diff":3},{"event":29,"opp":8,"home":false,"diff":3},{"event":30,"opp":14,"home":true,"diff":4},{"event":31,"opp":6,"home":false,"diff":4},{"event":32,"opp":20,"home":true,"diff":2},{"event":33,"opp":4,"home":false,"diff":3},{"event":34,"opp":9,"home":true,"diff":3},{"event":35,"opp":12,"home":true,"diff":2},{"event":36,"opp":11,"home":false,"diff":2},{"event":37,"opp":7,"home":true,"diff":2},{"event":38,"opp":16,"home":false,"diff":4}],"6":[{"event":1,"opp":10,"home":false,"diff":3},{"event":2,"opp":5,"home":true,"diff":2},{"event":3,"opp":1,"home":false,"diff":5},{"event":4,"opp":11,"home":true,"diff":2},{"event":5,"opp":4,"home":false,"diff":3},{"event":6,"opp":3,"home":true,"diff":3},{"event":7,"opp":9,"home":false,"diff":3},{"event":8,"opp":19,"home":true,"diff":3},{"event":9,"opp":16,"home":true,"diff":4},{"event":10,"opp":20,"home":false,"diff":3},{"event":11,"opp":13,"home":true,"diff":2},{"event":12,"opp":18,"home":false,"diff":3},{"event":13,"opp":8,"home":true,"diff":3},{"event":14,"opp":14,"home":true,"diff":4},{"event":15,"opp":15,"home":false,"diff":5},{"event":16,"opp":2,"home":true,"diff":3},{"event":17,"opp":7,"home":false,"diff":2},{"event":18,"opp":12,"home":false,"diff":2},{"event":19,"opp":17,"home":true,"diff":2},{"event":20,"opp":8,"home":false,"diff":3},{"event":21,"opp":20,"home":true,"diff":2},{"event":22,"opp":13,"home":false,"diff":3},{"event":23,"opp":18,"home":true,"diff":3},{"event":24,"opp":16,"home":false,"diff":4},{"event":25,"opp":17,"home":false,"diff":3},{"event":26,"opp":12,"home":true,"diff":2},{"event":27,"opp":2,"home":false,"diff":4},{"event":28,"opp":7,"home":true,"diff":2},{"event":29,"opp":1,"home":true,"diff":4},{"event":30,"opp":11,"home":false,"diff":2},{"event":31,"opp":10,"home":true,"diff":2},{"event":32,"opp":5,"home":false,"diff":3},{"event":33,"opp":15,"home":true,"diff":4},{"event":34,"opp":14,"home":false,"diff":4},{"event":35,"opp":19,"home":false,"diff":3},{"event":36,"opp":9,"home":true,"diff":3},{"event":37,"opp":3,"home":false,"diff":3},{"event":38,"opp":4,"home":true,"diff":3}]}};
+
+let state = { players:[], teams:{}, fixturesByTeam:{}, currentEvent:null, deadline:null, filtered:[], dir:'desc' };
+
+function fmtMoney(c){ return '£' + (c/10).toFixed(1); }
+function fmtPct(p){ return (p===null||p===undefined) ? '—' : parseFloat(p).toFixed(1)+'%'; }
+function diffColor(d){ if (d<=2) return 'var(--easy)'; if (d===3) return 'var(--medium)'; return 'var(--hard)'; }
+
+function fixtureAvgDifficulty(teamId, n){
+  const all = (state.fixturesByTeam[teamId]||[]).filter(f => f.event >= state.currentEvent);
+  const fx = all.slice(0, n||4);
+  if (!fx.length) return 3;
+  return fx.reduce((sum,f)=>sum+f.diff,0) / fx.length;
+}
+// Higher = better transfer target: rewards expected points, rewards an easier upcoming run
+function transferScore(p){
+  return p.epNext - (fixtureAvgDifficulty(p.teamId,4) - 3) * 0.4;
+}
+// For captaincy: FPL's own epNext model can lag a hot run of form, so give recent form a
+// nudge here — capped, so one fluke big-haul game can't swamp a proven high-EP option —
+// and look only at the very next fixture (captaincy is a one-gameweek call, not a hold).
+function captainScore(p){
+  return p.epNext + Math.min(p.form,8)*0.15 - (fixtureAvgDifficulty(p.teamId,1) - 3) * 0.2;
+}
+// For Top Picks by Position: like transferScore, but also factors in recent form
+// (capped, same reasoning as captainScore) — a player on a real cold streak shouldn't
+// out-rank a hot one just because their fixtures are marginally kinder.
+function topPickScore(p){
+  return p.epNext + Math.min(p.form,8)*0.2 - (fixtureAvgDifficulty(p.teamId,4) - 3) * 0.4;
+}
+const BOOTSTRAP_URL = 'https://fantasy.premierleague.com/api/bootstrap-static/';
+
+async function fetchWithTimeout(url, ms){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try{
+    const res = await fetch(url, {signal: controller.signal});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally { clearTimeout(timer); }
+}
+async function fetchJsonViaProxies(url, onAttempt){
+  const builders = [
+    u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+    u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+    u => 'https://cors.eu.org/' + u,
+    u => 'https://thingproxy.freeboard.io/fetch/' + u
+  ];
+  let lastErr;
+  for (let i = 0; i < builders.length; i++){
+    if (onAttempt) onAttempt(i+1, builders.length);
+    try{ return await fetchWithTimeout(builders[i](url), 25000); }
+    catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('all proxy attempts failed');
+}
+
+// Turn a live bootstrap-static payload into this app's internal shape —
+// mirrors the same field mapping used to build the baked FPL_DATA snapshot.
+function transformLiveBootstrap(json){
+  const teams = {};
+  (json.teams||[]).forEach(t => { teams[t.id] = { name: t.name, short_name: t.short_name }; });
+
+  const players = (json.elements||[]).map(p => ({
+    id: p.id, name: p.web_name, team: p.team, pos: p.element_type,
+    cost: p.now_cost, form: parseFloat(p.form)||0, totalPts: p.total_points,
+    ppg: parseFloat(p.points_per_game)||0, selected: parseFloat(p.selected_by_percent)||0,
+    epNext: parseFloat(p.ep_next)||0, status: p.status,
+    chance: (p.chance_of_playing_next_round===undefined) ? null : p.chance_of_playing_next_round
+  }));
+
+  // FPL's own is_current/is_next flags — more accurate than pure deadline math,
+  // since a gameweek stays "current" until its matches are actually played out,
+  // not just until the deadline passes.
+  let currentEvent = null, deadline = null;
+  const events = json.events || [];
+  const cur = events.find(e => e.is_current) || events.find(e => e.is_next);
+  if (cur){ currentEvent = cur.id; deadline = new Date(cur.deadline_time); }
+
+  return { teams, players, currentEvent, deadline };
+}
+
+function renderFrom(source){
+  state.teams = source.teams;
+  state.players = source.players.map(p => ({
+    ...p,
+    teamId: p.team,
+    value: p.cost > 0 ? (p.totalPts / (p.cost/10)) : 0
+  }));
+  state.currentEvent = source.currentEvent;
+  state.deadline = source.deadline;
+  document.getElementById('gwBadge').textContent = 'GW ' + source.currentEvent;
+  document.getElementById('updatedAt').textContent = source.freshnessText;
+
+  buildInsights();
+  applyFiltersAndRender();
+  startClock();
+  initMyTeam();
+}
+
+function computeBakedCurrentEvent(){
+  const now = new Date();
+  const deadlineEntries = Object.entries(FPL_DATA.eventDeadlines)
+    .map(([ev,iso]) => [parseInt(ev), new Date(iso)])
+    .sort((a,b) => a[0]-b[0]);
+  let currentEvent = deadlineEntries.length ? deadlineEntries[deadlineEntries.length-1][0] : 1;
+  let currentDeadline = deadlineEntries.length ? deadlineEntries[deadlineEntries.length-1][1] : now;
+  for (const [ev, dl] of deadlineEntries){
+    if (dl > now){ currentEvent = ev; currentDeadline = dl; break; }
+  }
+  return { currentEvent, currentDeadline };
+}
+
+async function tryLiveRefresh(manual){
+  const badge = document.getElementById('liveBadge');
+  const banner = document.getElementById('liveStatusBanner');
+  if (banner) banner.style.display = 'none';
+  if (badge){
+    badge.style.cursor = 'default';
+    badge.textContent = 'Checking…';
+    badge.style.background = 'rgba(255,255,255,.18)';
+    badge.style.display = 'inline-block';
+  }
+  try{
+    const json = await fetchJsonViaProxies(BOOTSTRAP_URL, (n, total) => {
+      if (badge) badge.textContent = `Checking (${n}/${total})…`;
+    });
+    const live = transformLiveBootstrap(json);
+    if (!live.players.length || !live.currentEvent) throw new Error('unexpected response shape');
+    // Live fixtures/difficulty aren't re-fetched — the season schedule barely
+    // changes — so keep the baked fixturesByTeam, just refresh players/teams/event.
+    renderFrom({
+      teams: live.teams,
+      players: live.players,
+      currentEvent: live.currentEvent,
+      deadline: live.deadline,
+      freshnessText: 'Live data as of ' + new Date().toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'})
+    });
+    if (badge){
+      badge.textContent = 'LIVE';
+      badge.style.background = 'var(--easy)';
+      badge.style.cursor = 'pointer';
+      badge.style.display = 'inline-block';
+    }
+  }catch(e){
+    const genDate = new Date(FPL_DATA.generatedAt);
+    const reason = (e && e.message) ? e.message : String(e);
+    document.getElementById('updatedAt').textContent = 'Cached snapshot from ' + genDate.toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}) + ' — live refresh failed (' + reason + '). Tap the badge to retry.';
+    if (badge){
+      badge.textContent = 'CACHED — retry';
+      badge.style.background = 'rgba(255,255,255,.18)';
+      badge.style.cursor = 'pointer';
+      badge.style.display = 'inline-block';
+    }
+    if (banner){
+      banner.textContent = 'Live refresh failed: ' + reason + ' — showing cached data instead. Tap the GW badge above to retry.';
+      banner.style.display = 'block';
+    }
+  }
+}
+
+function init(){
+  state.fixturesByTeam = FPL_DATA.fixturesByTeam;
+
+  const { currentEvent, currentDeadline } = computeBakedCurrentEvent();
+  const genDate = new Date(FPL_DATA.generatedAt);
+
+  const teamSelect = document.getElementById('teamSelect');
+  Object.entries(FPL_DATA.teams)
+    .sort((a,b)=>a[1].name.localeCompare(b[1].name))
+    .forEach(([id,t])=>{
+      const opt = document.createElement('option');
+      opt.value = id; opt.textContent = t.name;
+      teamSelect.appendChild(opt);
+    });
+
+  // Fast path: render the baked snapshot immediately so the page is usable at once.
+  renderFrom({
+    teams: FPL_DATA.teams,
+    players: FPL_DATA.players,
+    currentEvent, deadline: currentDeadline,
+    freshnessText: 'Cached snapshot from ' + genDate.toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}) + ' — trying to fetch live data…'
+  });
+
+  // Background: try to get genuinely live data and silently upgrade the view if it works.
+  tryLiveRefresh();
+}
+
+function fixtureChips(teamId){
+  const fx = (state.fixturesByTeam[teamId]||[]).filter(f => f.event >= state.currentEvent).slice(0,5);
+  if (!fx.length) return '<span style="color:var(--ink-soft);font-size:11px;">No fixture scheduled</span>';
+  return '<div class="fx-row">' + fx.map(f=>{
+    const short = state.teams[f.opp] ? state.teams[f.opp].short_name : '???';
+    return `<span class="fx-chip" style="background:${diffColor(f.diff)};">${short}${f.home?'H':'A'}</span>`;
+  }).join('') + '</div>';
+}
+
+function statusFlag(p){
+  if (p.status === 'a') return '';
+  const colors = {i:'var(--hard)', d:'var(--medium)', s:'var(--hard)', u:'var(--hard)', n:'var(--hard)'};
+  return `<span class="flag" style="background:${colors[p.status]||'var(--medium)'};"></span>`;
+}
+
+// Per-position: flag the weakest current squad player and the best available upgrades
+// nearby in price, weighing both expected points and upcoming fixture difficulty.
+function buildTransferTips(squad, bankTenths){
+  const squadIds = new Set(squad.map(s => s.player.id));
+  const byPos = {1:[], 2:[], 3:[], 4:[]};
+  squad.forEach(s => byPos[s.player.pos].push(s.player));
+  const posLabel = {1:'Goalkeeper', 2:'Defence', 3:'Midfield', 4:'Attack'};
+  const bankKnown = (bankTenths !== null && bankTenths !== undefined && !isNaN(bankTenths));
+
+  const fmtDelta = (c, weakest) => {
+    const deltaM = (c.cost - weakest.cost) / 10;
+    return (deltaM >= 0 ? '+' : '') + deltaM.toFixed(1) + 'm';
+  };
+  const candidateLine = (c, weakest) => {
+    const cFx = fixtureAvgDifficulty(c.teamId,4).toFixed(1);
+    return `<p>&bull; <strong>${c.name}</strong> (${state.teams[c.teamId].short_name}) — ${fmtMoney(c.cost)}m (${fmtDelta(c,weakest)}), ${c.epNext.toFixed(1)} EP, fixtures ${cFx}/5</p>`;
+  };
+
+  let html = '';
+  [1,2,3,4].forEach(posNum => {
+    const squadPlayers = byPos[posNum];
+    if (!squadPlayers.length) return;
+
+    const ranked = [...squadPlayers].sort((a,b)=>transferScore(a)-transferScore(b));
+    const weakest = ranked[0];
+    const weakestScore = transferScore(weakest);
+    const weakestFx = fixtureAvgDifficulty(weakest.teamId,4).toFixed(1);
+    const maxAffordable = bankKnown ? weakest.cost + bankTenths : null;
+
+    const pool = state.players.filter(p => p.pos===posNum && !squadIds.has(p.id) && p.status==='a');
+
+    // Same price bracket: within ±£0.2m, swap needs no extra funds regardless of bank
+    const sidegrades = pool
+      .filter(p => p.cost >= weakest.cost-2 && p.cost <= weakest.cost+2)
+      .sort((a,b)=>transferScore(b)-transferScore(a)).slice(0,3);
+
+    // Upgrades: pricier, capped at what the bank can actually afford if bank is known
+    const upgradePool = pool.filter(p => p.cost > weakest.cost+2 && p.cost <= weakest.cost+30);
+    const upgrades = (bankKnown ? upgradePool.filter(p => p.cost <= maxAffordable) : upgradePool)
+      .sort((a,b)=>transferScore(b)-transferScore(a)).slice(0,3);
+
+    const bestSideScore = sidegrades.length ? transferScore(sidegrades[0]) : -999;
+    const bestUpScore = upgrades.length ? transferScore(upgrades[0]) : -999;
+    const showSide = sidegrades.length && (bestSideScore - weakestScore) > 0.3;
+    const showUp = upgrades.length && (bestUpScore - weakestScore) > 0.75;
+
+    if (showSide || showUp){
+      html += `<div class="analysis-card warn"><h4>${posLabel[posNum]}</h4>
+        <p><strong>Weakest link:</strong> ${weakest.name} (${state.teams[weakest.teamId].short_name}) — ${fmtMoney(weakest.cost)}m, ${weakest.epNext.toFixed(1)} EP, fixture difficulty ${weakestFx}/5 over the next 4.</p>
+        ${showSide ? `<p><strong>Same price, no extra funds:</strong></p>${sidegrades.map(c=>candidateLine(c,weakest)).join('')}` : ''}
+        ${showUp ? `<p style="margin-top:8px;"><strong>Upgrade${bankKnown?' (fits your bank)':''}:</strong></p>${upgrades.map(c=>candidateLine(c,weakest)).join('')}` : ''}
+        ${!bankKnown ? `<p style="color:var(--ink-soft); font-size:11px; margin-top:6px;">Add your bank above to see which upgrades you can actually afford.</p>` : ''}
+      </div>`;
+    } else {
+      const strongest = ranked[ranked.length-1];
+      html += `<div class="analysis-card good"><h4>${posLabel[posNum]}</h4>
+        <p>No clear upgrade nearby in price right now. <strong>${strongest.name}</strong> (${fmtMoney(strongest.cost)}m, ${strongest.epNext.toFixed(1)} EP) is your strongest option here.</p>
+      </div>`;
+    }
+  });
+  return html;
+}
+
+// Differentials: low-owned players worth a punt — blends recent form with upcoming
+// fixture ease, rather than raw form alone (a good player with brutal fixtures next
+// isn't actually the differential you want).
+function differentialScore(p){
+  return p.form*0.5 + p.epNext - (fixtureAvgDifficulty(p.teamId,4) - 3) * 0.4;
+}
+
+function buildFixtureSwings(){
+  const ranked = Object.keys(state.teams).map(tid => ({
+    tid, name: state.teams[tid].name, avg: fixtureAvgDifficulty(tid,5)
+  })).sort((a,b)=>a.avg-b.avg);
+
+  const rowHtml = t => `<div class="fixture-row"><div class="fx-top"><span class="nm">${t.name}</span><span class="st">${t.avg.toFixed(1)}</span></div>${fixtureChips(t.tid)}</div>`;
+
+  document.getElementById('fixtureBestList').innerHTML = ranked.slice(0,5).map(rowHtml).join('');
+  document.getElementById('fixtureWorstList').innerHTML = [...ranked].reverse().slice(0,5).map(rowHtml).join('');
+}
+
+function buildTopPicksByPosition(){
+  const available = state.players.filter(p => p.status === 'a');
+  const rowHtml = p => `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtMoney(p.cost)}m · form ${p.form.toFixed(1)}</div></div><div class="st">${p.epNext.toFixed(1)}</div></div>`;
+
+  const targets = [[1,'topGkpList'], [2,'topDefList'], [3,'topMidList'], [4,'topFwdList']];
+  targets.forEach(([posNum, elId]) => {
+    const top5 = available.filter(p => p.pos === posNum).sort((a,b)=>topPickScore(b)-topPickScore(a)).slice(0,5);
+    document.getElementById(elId).innerHTML = top5.map(rowHtml).join('');
+  });
+}
+
+function buildInsights(){
+  const available = state.players.filter(p => p.status === 'a');
+
+  const captains = [...available].sort((a,b)=>captainScore(b)-captainScore(a)).slice(0,5);
+  document.getElementById('captainList').innerHTML = captains.map(p=>
+    `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${POS_NAME[p.pos]} · form ${p.form.toFixed(1)}</div></div><div class="st">${p.epNext.toFixed(1)}</div></div>`
+  ).join('');
+
+  buildTopPicksByPosition();
+
+  // ppg (not a fixed cumulative-points cutoff) so this stays meaningful in GW1 as much as GW30
+  const value = [...available].filter(p=>p.ppg>=4).sort((a,b)=>b.value-a.value).slice(0,5);
+  document.getElementById('valueList').innerHTML = value.map(p=>
+    `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtMoney(p.cost)}m</div></div><div class="st">${p.value.toFixed(1)}</div></div>`
+  ).join('');
+
+  const diffs = [...available].filter(p=>p.selected<10).sort((a,b)=>differentialScore(b)-differentialScore(a)).slice(0,5);
+  document.getElementById('diffList').innerHTML = diffs.map(p=>
+    `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned · form ${p.form.toFixed(1)}</div></div><div class="st">${p.epNext.toFixed(1)}</div></div>`
+  ).join('');
+
+  buildFixtureSwings();
+
+  const watch = [...state.players].filter(p=>p.status!=='a' && p.selected>=5).sort((a,b)=>b.selected-a.selected).slice(0,5);
+  document.getElementById('watchList').innerHTML = watch.length ? watch.map(p=>
+    `<div class="pick-row"><div><div class="nm">${p.name}${statusFlag(p)}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned</div></div><div class="st">${p.chance!==null&&p.chance!==undefined?p.chance+'%':'?'}</div></div>`
+  ).join('') : '<div class="pick-row"><span class="mt">No major flags among popular picks</span></div>';
+}
+
+function applyFiltersAndRender(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const activePos = parseInt(document.querySelector('#posPills .pill.active').dataset.pos);
+  const teamFilter = parseInt(document.getElementById('teamSelect').value);
+  const maxPriceVal = parseFloat(document.getElementById('maxPrice').value);
+  const hideUnavailable = document.getElementById('hideUnavailable').checked;
+  const sortKey = document.getElementById('sortSelect').value;
+  const desc = state.dir !== 'asc';
+
+  let list = state.players.filter(p=>{
+    if (q && !p.name.toLowerCase().includes(q)) return false;
+    if (activePos && p.pos !== activePos) return false;
+    if (teamFilter && p.teamId !== teamFilter) return false;
+    if (!isNaN(maxPriceVal) && (p.cost/10) > maxPriceVal) return false;
+    if (hideUnavailable && p.status !== 'a') return false;
+    return true;
+  });
+
+  const keyMap = {ep_next:'epNext', form:'form', total_points:'totalPts', ppg:'ppg', value:'value', now_cost:'cost', selected_by_percent:'selected'};
+  const k = keyMap[sortKey];
+  list.sort((a,b)=> desc ? b[k]-a[k] : a[k]-b[k]);
+
+  state.filtered = list;
+  renderPlayerList();
+  updateFilterBadge();
+}
+
+function updateFilterBadge(){
+  const btn = document.getElementById('filterBtn');
+  const activePos = document.querySelector('#posPills .pill.active').dataset.pos;
+  const team = document.getElementById('teamSelect').value;
+  const maxPrice = document.getElementById('maxPrice').value;
+  const active = activePos !== '0' || team !== '0' || maxPrice;
+  btn.classList.toggle('has-filters', !!active);
+  btn.textContent = active ? 'Filters •' : 'Filters';
+}
+
+function renderPlayerList(){
+  document.getElementById('resultCount').textContent = state.filtered.length + ' players';
+  const list = document.getElementById('playerList');
+  list.innerHTML = state.filtered.map(p=>{
+    const team = state.teams[p.teamId];
+    return `<div class="p-card">
+      <div class="p-top">
+        <span class="pos-badge" style="background:${POS_COLOR[p.pos]};">${POS_NAME[p.pos]}</span>
+        <div class="p-name">${p.name}${statusFlag(p)}</div>
+        <div class="p-price">${fmtMoney(p.cost)}m</div>
+      </div>
+      <div class="p-team">${team.name}</div>
+      <div class="p-stats">
+        <div class="stat"><span class="v">${p.form.toFixed(1)}</span><span class="l">Form</span></div>
+        <div class="stat"><span class="v">${p.totalPts}</span><span class="l">Pts</span></div>
+        <div class="stat"><span class="v">${p.epNext.toFixed(1)}</span><span class="l">EP</span></div>
+        <div class="stat"><span class="v">${fmtPct(p.selected)}</span><span class="l">Own</span></div>
+      </div>
+      ${fixtureChips(p.teamId)}
+    </div>`;
+  }).join('');
+}
+
+// ---------- My Team ----------
+let myTeamState = null;
+
+function buildSquad(picksArray){
+  const byId = {};
+  state.players.forEach(p => byId[p.id] = p);
+  return picksArray.map(pk => ({ ...pk, player: byId[pk.element] })).filter(p => p.player);
+}
+
+// ---------- Squad persistence (plain localStorage — works standalone, no Claude needed) ----------
+function saveSquadToStorage(picks){
+  try{ localStorage.setItem('fpl_my_squad', JSON.stringify(picks)); }catch(e){ /* storage unavailable, e.g. private browsing */ }
+}
+function loadSquadFromStorage(){
+  try{
+    const raw = localStorage.getItem('fpl_my_squad');
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveBankToStorage(poundsM){
+  try{
+    if (poundsM === '' || poundsM === null || isNaN(poundsM)){
+      localStorage.removeItem('fpl_my_bank');
+    } else {
+      localStorage.setItem('fpl_my_bank', String(poundsM));
+    }
+  }catch(e){}
+}
+function loadBankFromStorage(){
+  try{
+    const raw = localStorage.getItem('fpl_my_bank');
+    if (raw === null) return null;
+    const val = parseFloat(raw);
+    return isNaN(val) ? null : val;
+  }catch(e){ return null; }
+}
+
+function initMyTeam(){
+  try{
+    if (!localStorage.getItem('fpl_squad_reset_v2')){
+      saveSquadToStorage(MY_TEAM_PICKS);
+      localStorage.setItem('fpl_squad_reset_v2', '1');
+    }
+  }catch(e){}
+  let picks = loadSquadFromStorage();
+  if (!picks || picks.length !== 15){
+    picks = MY_TEAM_PICKS;
+    if (picks && picks.length === 15) saveSquadToStorage(picks);
+  }
+  if (picks && picks.length === 15){
+    const squad = buildSquad(picks);
+    myTeamState = { picksData: { active_chip: null }, squad, hist: {}, isBaked: true };
+    document.getElementById('teamView').style.display = 'block';
+    renderMyTeam();
+  } else {
+    openBuilder([]);
+  }
+}
+
+// ---------- Squad builder: step 1, pick 15 players ----------
+let builderSelected = new Map();
+
+function openBuilder(initialPicks){
+  builderSelected = new Map();
+  if (initialPicks && initialPicks.length){
+    const byId = {}; state.players.forEach(p => byId[p.id] = p);
+    initialPicks.forEach(pk => { const pl = byId[pk.element]; if (pl) builderSelected.set(pl.id, pl); });
+  }
+  document.getElementById('teamView').style.display = 'none';
+  document.getElementById('builderStep2').style.display = 'none';
+  document.getElementById('builderStep1').style.display = 'block';
+  document.getElementById('builderSearch').value = '';
+  renderBuilderList();
+}
+
+function builderRowHtml(p){
+  const sel = builderSelected.has(p.id);
+  const team = state.teams[p.teamId];
+  return `<div class="builder-row ${sel?'selected':''}" data-id="${p.id}">
+    <div class="b-check">${sel?'&#10003;':''}</div>
+    <span class="pos-badge" style="background:${POS_COLOR[p.pos]};">${POS_NAME[p.pos]}</span>
+    <div class="b-mid"><div class="b-name">${p.name}</div><div class="b-meta">${team.name}</div></div>
+    <div class="b-price">${fmtMoney(p.cost)}m</div>
+  </div>`;
+}
+
+function renderBuilderList(){
+  const q = document.getElementById('builderSearch').value.trim().toLowerCase();
+  const list = document.getElementById('builderList');
+
+  const selectedPlayers = Array.from(builderSelected.values());
+  let pool;
+  if (q){
+    pool = state.players.filter(p => p.name.toLowerCase().includes(q) && !builderSelected.has(p.id));
+  } else {
+    pool = [...state.players].filter(p => !builderSelected.has(p.id)).sort((a,b)=>b.totalPts-a.totalPts).slice(0,50);
+  }
+
+  let html = '';
+  if (selectedPlayers.length){
+    html += `<div class="squad-section-title" style="margin:4px 0 8px;">Selected (${selectedPlayers.length})</div>`;
+    html += selectedPlayers.map(builderRowHtml).join('');
+    html += `<div class="squad-section-title" style="margin:16px 0 8px;">${q ? 'Search results' : 'Top players'}</div>`;
+  }
+  if (!pool.length && !selectedPlayers.length){
+    html += '<div class="builder-empty">No players match that search.</div>';
+  } else if (!pool.length){
+    html += `<div class="builder-empty">No other players match that search.</div>`;
+  } else {
+    html += pool.map(builderRowHtml).join('');
+  }
+  list.innerHTML = html;
+
+  document.getElementById('builderCount').textContent = builderSelected.size + ' / 15 selected';
+  document.getElementById('builderNextBtn').disabled = builderSelected.size !== 15;
+  list.querySelectorAll('.builder-row').forEach(row=>{
+    row.addEventListener('click', () => {
+      const id = parseInt(row.dataset.id);
+      if (builderSelected.has(id)){
+        builderSelected.delete(id);
+      } else {
+        if (builderSelected.size >= 15) return;
+        const p = state.players.find(pl => pl.id === id);
+        builderSelected.set(id, p);
+      }
+      renderBuilderList();
+    });
+  });
+}
+
+// ---------- Squad builder: step 2, arrange XI / bench / captain ----------
+let arrangeData = [];
+
+function goToArrangeStep(){
+  const players = Array.from(builderSelected.values());
+  const gks = players.filter(p => p.pos === 1).sort((a,b)=>b.epNext-a.epNext);
+  const benchIds = new Set();
+  if (gks.length >= 2) benchIds.add(gks[1].id);
+  const outfieldAsc = players.filter(p => p.pos !== 1).sort((a,b)=>a.epNext-b.epNext);
+  for (const p of outfieldAsc){
+    if (benchIds.size >= 4) break;
+    benchIds.add(p.id);
+  }
+  arrangeData = players.map(p => ({ player: p, bench: benchIds.has(p.id), captain: false, vice: false }));
+  const startingSorted = arrangeData.filter(a => !a.bench).sort((a,b)=>b.player.epNext-a.player.epNext);
+  if (startingSorted[0]) startingSorted[0].captain = true;
+  if (startingSorted[1]) startingSorted[1].vice = true;
+
+  document.getElementById('builderStep1').style.display = 'none';
+  document.getElementById('builderStep2').style.display = 'block';
+  document.getElementById('arrangeMsg').textContent = '';
+  renderArrangeList();
+}
+
+function renderArrangeList(){
+  const sorted = [...arrangeData].sort((a,b)=>{
+    if (a.bench !== b.bench) return a.bench ? 1 : -1;
+    if (a.player.pos !== b.player.pos) return a.player.pos - b.player.pos;
+    return b.player.epNext - a.player.epNext;
+  });
+  const list = document.getElementById('arrangeList');
+  list.innerHTML = sorted.map(item=>{
+    const p = item.player;
+    const team = state.teams[p.teamId];
+    return `<div class="arrange-row ${item.bench?'is-bench':''}" data-id="${p.id}">
+      <span class="pos-badge" style="background:${POS_COLOR[p.pos]};">${POS_NAME[p.pos]}</span>
+      <div class="a-mid"><div class="a-name">${p.name}</div><div class="a-meta">${team.short_name} · ${fmtMoney(p.cost)}m · ${p.epNext.toFixed(1)} EP</div></div>
+      <button class="mini-btn ${item.bench?'active-bench':''}" data-action="bench">B</button>
+      <button class="mini-btn ${item.captain?'active-c':''}" data-action="captain">C</button>
+      <button class="mini-btn ${item.vice?'active-v':''}" data-action="vice">V</button>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.arrange-row').forEach(row=>{
+    const id = parseInt(row.dataset.id);
+    const item = arrangeData.find(a => a.player.id === id);
+    row.querySelectorAll('.mini-btn').forEach(btn=>{
+      btn.addEventListener('click', () => {
+        const msg = document.getElementById('arrangeMsg');
+        const action = btn.dataset.action;
+        if (action === 'bench'){
+          const benchCount = arrangeData.filter(a=>a.bench).length;
+          if (!item.bench && benchCount >= 4){ msg.textContent = 'Bench is full (max 4) — unbench someone first.'; return; }
+          item.bench = !item.bench;
+          if (item.bench){ item.captain = false; item.vice = false; }
+        } else if (action === 'captain'){
+          if (item.bench){ msg.textContent = 'Captain must be in the starting XI.'; return; }
+          arrangeData.forEach(a => a.captain = false);
+          item.captain = true;
+          if (item.vice) item.vice = false;
+        } else if (action === 'vice'){
+          if (item.bench){ msg.textContent = 'Vice-captain must be in the starting XI.'; return; }
+          arrangeData.forEach(a => a.vice = false);
+          item.vice = true;
+          if (item.captain) item.captain = false;
+        }
+        msg.textContent = '';
+        renderArrangeList();
+      });
+    });
+  });
+}
+
+function saveArrangedSquad(){
+  const msg = document.getElementById('arrangeMsg');
+  const benchCount = arrangeData.filter(a=>a.bench).length;
+  const startingCount = arrangeData.length - benchCount;
+  if (startingCount !== 11){ msg.textContent = `You need exactly 11 starting players (currently ${startingCount}).`; return; }
+  if (!arrangeData.some(a=>a.captain)){ msg.textContent = 'Pick a captain.'; return; }
+  if (!arrangeData.some(a=>a.vice)){ msg.textContent = 'Pick a vice-captain.'; return; }
+
+  const startingItems = arrangeData.filter(a=>!a.bench).sort((a,b)=>a.player.pos-b.player.pos);
+  const benchItems = arrangeData.filter(a=>a.bench).sort((a,b)=>a.player.pos-b.player.pos);
+  const picks = [];
+  let pos = 1;
+  startingItems.forEach(item => picks.push({ element:item.player.id, position:pos++, is_captain:item.captain, is_vice_captain:item.vice }));
+  benchItems.forEach(item => picks.push({ element:item.player.id, position:pos++, is_captain:false, is_vice_captain:false }));
+
+  saveSquadToStorage(picks);
+  const squad = buildSquad(picks);
+  myTeamState = { picksData: { active_chip: null }, squad, hist: {}, isBaked: true };
+  document.getElementById('builderStep2').style.display = 'none';
+  document.getElementById('teamView').style.display = 'block';
+  renderMyTeam();
+}
+
+function squadCardHtml(pick){
+  const p = pick.player;
+  const team = state.teams[p.teamId];
+  let badge = '';
+  if (pick.is_captain) badge = '<span class="chip-badge">C</span>';
+  else if (pick.is_vice_captain) badge = '<span class="chip-badge vc">VC</span>';
+  return `<div class="squad-card ${pick.position > 11 ? 'benched' : ''}">
+    <span class="pos-badge" style="background:${POS_COLOR[p.pos]};">${POS_NAME[p.pos]}</span>
+    <div class="sq-mid">
+      <div class="sq-name">${p.name}${badge}${statusFlag(p)}</div>
+      <div class="sq-meta">${team.name} · ${fmtMoney(p.cost)}m</div>
+    </div>
+    <div class="sq-right">
+      <div class="sq-price">${p.epNext.toFixed(1)} EP</div>
+      <div class="sq-ep">${fmtPct(p.selected)} owned</div>
+    </div>
+  </div>`;
+}
+
+function renderMyTeam(){
+  const { picksData, squad, hist, isBaked } = myTeamState;
+  const view = document.getElementById('teamView');
+
+  const starting = squad.filter(p => p.position <= 11).sort((a,b)=>a.position-b.position);
+  const bench = squad.filter(p => p.position > 11).sort((a,b)=>a.position-b.position);
+
+  const computedValue = squad.reduce((sum,p) => sum + p.player.cost, 0);
+  const squadValueDisplay = hist.value !== undefined ? '£'+(hist.value/10).toFixed(1)+'m' : '£'+(computedValue/10).toFixed(1)+'m';
+
+  let html = '';
+  html += `<button class="btn ghost" id="editSquadBtn" style="width:100%; margin-bottom:12px;">Edit squad</button>`;
+  html += `<div class="team-header">
+    <div class="tname">My Team</div>
+    <div class="mname">Team ID ${TEAM_ID}${hist.overall_rank ? ' · Overall rank ' + hist.overall_rank.toLocaleString() : ''}</div>
+    <div class="team-stats">
+      <div class="ts"><div class="v">${squadValueDisplay}</div><div class="l">Squad Value</div></div>
+      <div class="ts"><div class="v">${hist.bank!==undefined ? '£'+(hist.bank/10).toFixed(1)+'m' : '—'}</div><div class="l">Bank</div></div>
+      <div class="ts"><div class="v">${hist.points!==undefined ? hist.points : '—'}</div><div class="l">GW Pts</div></div>
+      <div class="ts"><div class="v">${picksData.active_chip || 'None'}</div><div class="l">Chip</div></div>
+    </div>
+  </div>`;
+
+  html += '<div class="squad-section-title">Starting XI</div>';
+  html += starting.map(squadCardHtml).join('');
+  html += '<div class="squad-section-title">Bench</div>';
+  html += bench.map(squadCardHtml).join('');
+
+  // ---- Analysis ----
+  html += '<div class="squad-section-title">Analysis</div>';
+
+  // Captaincy check
+  const captainPick = squad.find(p => p.is_captain);
+  const bestInSquad = [...squad].sort((a,b)=>captainScore(b.player) - captainScore(a.player))[0];
+  if (captainPick && bestInSquad && bestInSquad.player.id !== captainPick.player.id && (captainScore(bestInSquad.player) - captainScore(captainPick.player)) > 0.75){
+    html += `<div class="analysis-card warn"><h4>Captaincy</h4><p><strong>${bestInSquad.player.name}</strong> (form ${bestInSquad.player.form.toFixed(1)}, ${bestInSquad.player.epNext.toFixed(1)} EP) rates higher than your captain <strong>${captainPick.player.name}</strong> (form ${captainPick.player.form.toFixed(1)}, ${captainPick.player.epNext.toFixed(1)} EP) once recent form and the next fixture are weighed in. Worth a look before the deadline.</p></div>`;
+  } else if (captainPick){
+    html += `<div class="analysis-card good"><h4>Captaincy</h4><p><strong>${captainPick.player.name}</strong> (form ${captainPick.player.form.toFixed(1)}, ${captainPick.player.epNext.toFixed(1)} EP) is your strongest option in the squad — looks like the right pick.</p></div>`;
+  }
+
+  // Flagged players in squad
+  const flagged = squad.filter(p => p.player.status !== 'a');
+  if (flagged.length){
+    html += `<div class="analysis-card warn"><h4>Fitness flags</h4><p>${flagged.map(p => `<strong>${p.player.name}</strong> (${p.position<=11?'starting':'bench'}, ${p.player.chance!==null?p.player.chance+'% chance':'status: '+p.player.status})`).join(', ')}.</p></div>`;
+  } else {
+    html += `<div class="analysis-card good"><h4>Fitness flags</h4><p>No injury or suspension doubts in your 15.</p></div>`;
+  }
+
+  // Bench vs starting EP mismatch (same position type)
+  const mismatches = [];
+  bench.forEach(b => {
+    const compatibleStarters = starting.filter(s => s.player.pos === b.player.pos);
+    if (!compatibleStarters.length) return;
+    const weakest = compatibleStarters.sort((a,x)=>a.player.epNext-x.player.epNext)[0];
+    if (b.player.epNext - weakest.player.epNext > 1.0 && b.player.status === 'a'){
+      mismatches.push({ bench: b.player, starter: weakest.player });
+    }
+  });
+  if (mismatches.length){
+    html += `<div class="analysis-card warn"><h4>Bench vs XI</h4><p>${mismatches.map(m => `<strong>${m.bench.name}</strong> (bench, ${m.bench.epNext.toFixed(1)} EP) is projected higher than <strong>${m.starter.name}</strong> (starting, ${m.starter.epNext.toFixed(1)} EP).`).join(' ')}</p></div>`;
+  } else {
+    html += `<div class="analysis-card good"><h4>Bench vs XI</h4><p>Your strongest projected XI is already starting — no obvious bench upgrades.</p></div>`;
+  }
+
+  html += '<div class="squad-section-title">Transfer Tips by Position</div>';
+  html += `<p style="font-size:11.5px; color:var(--ink-soft); margin:-4px 0 10px;">Weighs next-GW expected points against each team's difficulty over their next 4 fixtures.</p>`;
+  const savedBank = loadBankFromStorage();
+  html += `<div style="display:flex; align-items:center; gap:8px; margin:0 0 12px;">
+    <label style="font-size:12px; color:var(--ink-soft); font-weight:600;">Your bank:</label>
+    <span style="font-size:13px; color:var(--ink-soft);">&pound;</span>
+    <input type="number" id="bankInput" step="0.1" min="0" placeholder="0.0" value="${savedBank!==null?savedBank:''}" style="width:70px; border:1px solid var(--line); border-radius:7px; padding:6px 8px; font-size:13px;">
+    <span style="font-size:13px; color:var(--ink-soft);">m</span>
+    <button id="saveBankBtn" class="btn" style="padding:7px 14px; font-size:12px;">Save</button>
+  </div>`;
+  const bankTenths = savedBank !== null ? Math.round(savedBank*10) : null;
+  html += buildTransferTips(squad, bankTenths);
+
+  // Squad value cross-check
+  const recomputedValue = squad.reduce((sum,p) => sum + p.player.cost, 0);
+  if (hist.value !== undefined && Math.abs(recomputedValue - hist.value) > 2){
+    html += `<div class="analysis-card"><h4>Value check</h4><p>Your last recorded squad value was £${(hist.value/10).toFixed(1)}m, but at current prices these 15 players cost £${(recomputedValue/10).toFixed(1)}m — a transfer may have happened since, or prices moved.</p></div>`;
+  }
+
+  view.innerHTML = html;
+  document.getElementById('editSquadBtn').addEventListener('click', () => {
+    const currentPicks = squad.map(s => ({ element: s.element, position: s.position, is_captain: s.is_captain, is_vice_captain: s.is_vice_captain }));
+    openBuilder(currentPicks);
+  });
+  const commitBank = () => {
+    const val = parseFloat(document.getElementById('bankInput').value);
+    saveBankToStorage(isNaN(val) ? '' : val);
+    renderMyTeam();
+  };
+  document.getElementById('saveBankBtn').addEventListener('click', commitBank);
+  document.getElementById('bankInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter'){ e.preventDefault(); commitBank(); }
+  });
+}
+
+let clockIntervalId = null;
+function startClock(){
+  function tick(){
+    const now = new Date();
+    let diff = state.deadline - now;
+    const el = document.getElementById('clockVal');
+    if (diff <= 0){ el.textContent = 'Gates closed'; return; }
+    const d = Math.floor(diff/86400000); diff -= d*86400000;
+    const h = Math.floor(diff/3600000); diff -= h*3600000;
+    const m = Math.floor(diff/60000); diff -= m*60000;
+    const s = Math.floor(diff/1000);
+    el.textContent = `${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+  }
+  if (clockIntervalId !== null) clearInterval(clockIntervalId);
+  tick();
+  clockIntervalId = setInterval(tick, 1000);
+}
+
+// ---- events ----
+document.getElementById('search').addEventListener('input', applyFiltersAndRender);
+document.getElementById('builderSearch').addEventListener('input', renderBuilderList);
+document.getElementById('builderNextBtn').addEventListener('click', goToArrangeStep);
+document.getElementById('saveSquadBtn').addEventListener('click', saveArrangedSquad);
+document.getElementById('liveBadge').addEventListener('click', () => tryLiveRefresh(true));
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    window.scrollTo(0,0);
+  });
+});
+
+const sheet = document.getElementById('filterSheet');
+const overlay = document.getElementById('sheetOverlay');
+function openSheet(){ sheet.classList.add('open'); overlay.classList.add('open'); }
+function closeSheet(){ sheet.classList.remove('open'); overlay.classList.remove('open'); }
+document.getElementById('filterBtn').addEventListener('click', openSheet);
+document.getElementById('doneFilterBtn').addEventListener('click', closeSheet);
+overlay.addEventListener('click', closeSheet);
+
+document.querySelectorAll('#posPills .pill').forEach(p=>{
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#posPills .pill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    applyFiltersAndRender();
+  });
+});
+document.getElementById('teamSelect').addEventListener('change', applyFiltersAndRender);
+document.getElementById('maxPrice').addEventListener('input', applyFiltersAndRender);
+document.getElementById('sortSelect').addEventListener('change', applyFiltersAndRender);
+document.getElementById('hideUnavailable').addEventListener('change', applyFiltersAndRender);
+document.getElementById('dirDesc').addEventListener('click', () => {
+  state.dir='desc';
+  document.getElementById('dirDesc').classList.add('active');
+  document.getElementById('dirAsc').classList.remove('active');
+  applyFiltersAndRender();
+});
+document.getElementById('dirAsc').addEventListener('click', () => {
+  state.dir='asc';
+  document.getElementById('dirAsc').classList.add('active');
+  document.getElementById('dirDesc').classList.remove('active');
+  applyFiltersAndRender();
+});
+
+init();
+</script>
+</body>
+</html>
