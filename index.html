@@ -298,7 +298,7 @@
       <span class="val" id="clockVal">--:--:--:--</span>
     </div>
   </div>
-  <div id="liveStatusBanner" style="display:none; background:#FBEAE8; color:#7A2A22; font-size:11.5px; line-height:1.5; padding:9px 14px; text-align:center;"></div>
+  <div id="liveStatusBanner" style="display:none; background:#FBEAE8; color:#7A2A22; font-size:11.5px; line-height:1.6; padding:9px 14px; text-align:left;"></div>
 
   <main id="app" style="display:block;">
     <section class="tab-panel active" id="picksTab">
@@ -504,20 +504,27 @@ async function fetchWithTimeout(url, ms){
   } finally { clearTimeout(timer); }
 }
 async function fetchJsonViaProxies(url, onAttempt){
-  const builders = [
-    u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
-    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-    u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
-    u => 'https://cors.eu.org/' + u,
-    u => 'https://thingproxy.freeboard.io/fetch/' + u
+  const proxies = [
+    { name: 'codetabs',    build: u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u) },
+    { name: 'allorigins',  build: u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) },
+    { name: 'corsproxy',   build: u => 'https://corsproxy.io/?url=' + encodeURIComponent(u) },
+    { name: 'cors.eu.org', build: u => 'https://cors.eu.org/' + u },
+    { name: 'thingproxy',  build: u => 'https://thingproxy.freeboard.io/fetch/' + u }
   ];
-  let lastErr;
-  for (let i = 0; i < builders.length; i++){
-    if (onAttempt) onAttempt(i+1, builders.length);
-    try{ return await fetchWithTimeout(builders[i](url), 25000); }
-    catch(e){ lastErr = e; }
+  const attempts = [];
+  for (let i = 0; i < proxies.length; i++){
+    if (onAttempt) onAttempt(i+1, proxies.length, proxies[i].name);
+    try{
+      const result = await fetchWithTimeout(proxies[i].build(url), 25000);
+      return { data: result, attempts };
+    }catch(e){
+      attempts.push({ name: proxies[i].name, error: (e && e.message) ? e.message : String(e) });
+    }
   }
-  throw lastErr || new Error('all proxy attempts failed');
+  const summary = attempts.map(a => `${a.name}: ${a.error}`).join(' | ');
+  const err = new Error(summary || 'all proxy attempts failed');
+  err.attempts = attempts;
+  throw err;
 }
 
 // Turn a live bootstrap-static payload into this app's internal shape —
@@ -587,8 +594,8 @@ async function tryLiveRefresh(manual){
     badge.style.display = 'inline-block';
   }
   try{
-    const json = await fetchJsonViaProxies(BOOTSTRAP_URL, (n, total) => {
-      if (badge) badge.textContent = `Checking (${n}/${total})…`;
+    const { data: json } = await fetchJsonViaProxies(BOOTSTRAP_URL, (n, total, name) => {
+      if (badge) badge.textContent = `Checking ${name} (${n}/${total})…`;
     });
     const live = transformLiveBootstrap(json);
     if (!live.players.length || !live.currentEvent) throw new Error('unexpected response shape');
@@ -610,7 +617,7 @@ async function tryLiveRefresh(manual){
   }catch(e){
     const genDate = new Date(FPL_DATA.generatedAt);
     const reason = (e && e.message) ? e.message : String(e);
-    document.getElementById('updatedAt').textContent = 'Cached snapshot from ' + genDate.toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}) + ' — live refresh failed (' + reason + '). Tap the badge to retry.';
+    document.getElementById('updatedAt').textContent = 'Cached snapshot from ' + genDate.toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}) + ' — live refresh failed. Tap the badge to retry.';
     if (badge){
       badge.textContent = 'CACHED — retry';
       badge.style.background = 'rgba(255,255,255,.18)';
@@ -618,7 +625,10 @@ async function tryLiveRefresh(manual){
       badge.style.display = 'inline-block';
     }
     if (banner){
-      banner.textContent = 'Live refresh failed: ' + reason + ' — showing cached data instead. Tap the GW badge above to retry.';
+      const breakdown = (e && e.attempts && e.attempts.length)
+        ? e.attempts.map(a => `${a.name}: ${a.error}`).join('<br>')
+        : reason;
+      banner.innerHTML = '<strong>Live refresh failed — every proxy attempt:</strong><br>' + breakdown + '<br>Showing cached data instead. Tap the GW badge above to retry.';
       banner.style.display = 'block';
     }
   }
