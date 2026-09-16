@@ -504,10 +504,11 @@ async function fetchWithTimeout(url, ms){
   } finally { clearTimeout(timer); }
 }
 async function fetchJsonViaProxies(url, onAttempt){
+  const MY_WORKER = 'https://gentle-fire-cbb1.nicwaznego2011.workers.dev/';
   const proxies = [
+    { name: 'my-worker',   build: u => MY_WORKER + '?url=' + encodeURIComponent(u) },
     { name: 'codetabs',    build: u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u) },
     { name: 'allorigins',  build: u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) },
-    { name: 'corsproxy',   build: u => 'https://corsproxy.io/?url=' + encodeURIComponent(u) },
     { name: 'cors.eu.org', build: u => 'https://cors.eu.org/' + u },
     { name: 'thingproxy',  build: u => 'https://thingproxy.freeboard.io/fetch/' + u }
   ];
