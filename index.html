@@ -488,7 +488,7 @@ function transferScore(p){
 // weigh that. This is multiplicative (not a flat offset) so it still matters even when a
 // defender's own ep_next has been pulled unusually high by one big haul, not just when
 // scores are already close.
-const CAPTAIN_POS_WEIGHT = {1: 0.82, 2: 0.85, 3: 1.0, 4: 1.08};
+const CAPTAIN_POS_WEIGHT = {1: 0.72, 2: 0.75, 3: 1.0, 4: 1.08};
 function captainScore(p){
   const base = p.epNext + Math.min(p.form,8)*0.15 - (fixtureAvgDifficulty(p.teamId,1) - 3) * 0.2;
   return base * CAPTAIN_POS_WEIGHT[p.pos];
