@@ -115,6 +115,34 @@
   .fixture-row .fx-top .nm{font-weight:600; font-size:13.5px;}
   .fixture-row .fx-top .st{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; color:var(--pitch);}
 
+  /* ---------- Fixture ticker grid ---------- */
+  .fx-grid-table{border-collapse:collapse; font-size:11px;}
+  .fx-grid-table th{padding:4px 6px; text-align:center; font-family:'Barlow Condensed',sans-serif; font-weight:700; color:var(--ink-soft); white-space:nowrap;}
+  .fx-grid-table td{padding:3px 4px; text-align:center;}
+  .fx-grid-table .team-cell{
+    text-align:left; font-weight:700; font-size:11.5px; white-space:nowrap;
+    position:sticky; left:0; background:var(--card); padding-right:10px;
+  }
+  .fx-grid-chip{
+    display:inline-block; min-width:34px; padding:3px 4px; border-radius:4px;
+    font-family:'Barlow Condensed',sans-serif; font-weight:700; color:#fff; font-size:10px;
+  }
+
+  /* ---------- Set piece / price watch rows ---------- */
+  .sp-row{padding:7px 0; border-top:1px solid var(--line); font-size:12.5px; display:flex; justify-content:space-between; gap:8px;}
+  .sp-row:first-child{border-top:none; padding-top:0;}
+  .sp-row .sp-team{font-weight:700; flex-shrink:0; width:78px;}
+  .sp-row .sp-roles{color:var(--ink-soft); text-align:right;}
+  .sp-row .sp-roles b{color:var(--ink); font-weight:600;}
+
+  /* ---------- Blank/double + chip timing ---------- */
+  .bd-row{padding:8px 0; border-top:1px solid var(--line); font-size:12.5px;}
+  .bd-row:first-child{border-top:none; padding-top:0;}
+  .bd-row .bd-gw{font-family:'Barlow Condensed',sans-serif; font-weight:700; color:var(--pitch); font-size:14px;}
+  .bd-tag{display:inline-block; font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:4px; margin-right:5px; font-family:'Barlow Condensed',sans-serif;}
+  .bd-tag.double{background:var(--easy); color:#fff;}
+  .bd-tag.blank{background:var(--hard); color:#fff;}
+
   /* ---------- Players tab ---------- */
   .search-row{display:flex; gap:8px; margin-bottom:12px;}
   .search-row input{
@@ -330,17 +358,22 @@
         <div id="diffList"></div>
       </div>
       <div class="pick-card">
-        <h3>Fixture Swings</h3>
-        <div class="sub">Next 5 gameweeks, avg difficulty (lower = easier)</div>
-        <div style="font-size:11px; font-weight:700; color:var(--easy); text-transform:uppercase; letter-spacing:.05em; margin:8px 0 4px;">Kindest run</div>
-        <div id="fixtureBestList"></div>
-        <div style="font-size:11px; font-weight:700; color:var(--hard); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 4px;">Toughest run</div>
-        <div id="fixtureWorstList"></div>
-      </div>
-      <div class="pick-card">
         <h3>Watch List</h3>
         <div class="sub">Highly owned, fitness doubt</div>
         <div id="watchList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Set Piece Takers</h3>
+        <div class="sub">Primary penalty / free-kick / corner takers by club</div>
+        <div id="setPieceList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Price Watch</h3>
+        <div class="sub">Biggest transfer momentum this gameweek</div>
+        <div style="font-size:11px; font-weight:700; color:var(--easy); text-transform:uppercase; letter-spacing:.05em; margin:8px 0 4px;">Rising</div>
+        <div id="priceRiseList"></div>
+        <div style="font-size:11px; font-weight:700; color:var(--hard); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 4px;">Falling</div>
+        <div id="priceFallList"></div>
       </div>
     </section>
 
@@ -351,6 +384,34 @@
       </div>
       <div class="result-count" id="resultCount"></div>
       <div id="playerList"></div>
+    </section>
+
+    <section class="tab-panel" id="plannerTab">
+      <div class="pick-card">
+        <h3>Fixture Swings</h3>
+        <div class="sub">Next 5 gameweeks, avg difficulty (lower = easier)</div>
+        <div style="font-size:11px; font-weight:700; color:var(--easy); text-transform:uppercase; letter-spacing:.05em; margin:8px 0 4px;">Kindest run</div>
+        <div id="fixtureBestList"></div>
+        <div style="font-size:11px; font-weight:700; color:var(--hard); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 4px;">Toughest run</div>
+        <div id="fixtureWorstList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Blank &amp; Double Gameweeks</h3>
+        <div class="sub">Next 8 gameweeks — teams with 0 or 2+ fixtures</div>
+        <div id="blankDoubleList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Chip Timing</h3>
+        <div class="sub">Windows worth planning around</div>
+        <div id="chipTimingList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Fixture Ticker</h3>
+        <div class="sub">All 20 teams, next 6 gameweeks &mdash; scroll sideways</div>
+        <div id="fixtureGridWrap" style="overflow-x:auto;">
+          <div id="fixtureGrid"></div>
+        </div>
+      </div>
     </section>
 
     <section class="tab-panel" id="myTeamTab">
@@ -387,6 +448,7 @@
   <nav class="bottom-tabs" id="bottomTabs" style="display:flex;">
     <button class="tab-btn active" data-tab="picksTab"><span class="dot"></span>Picks</button>
     <button class="tab-btn" data-tab="playersTab"><span class="dot"></span>Players</button>
+    <button class="tab-btn" data-tab="plannerTab"><span class="dot"></span>Planner</button>
     <button class="tab-btn" data-tab="myTeamTab"><span class="dot"></span>My Team</button>
   </nav>
 
@@ -546,7 +608,14 @@ function transformLiveBootstrap(json){
     cost: p.now_cost, form: parseFloat(p.form)||0, totalPts: p.total_points,
     ppg: parseFloat(p.points_per_game)||0, selected: parseFloat(p.selected_by_percent)||0,
     epNext: parseFloat(p.ep_next)||0, status: p.status,
-    chance: (p.chance_of_playing_next_round===undefined) ? null : p.chance_of_playing_next_round
+    chance: (p.chance_of_playing_next_round===undefined) ? null : p.chance_of_playing_next_round,
+    penOrder: p.penalties_order ?? null,
+    fkOrder: p.direct_freekicks_order ?? null,
+    cornerOrder: p.corners_and_indirect_freekicks_order ?? null,
+    transfersInEvent: p.transfers_in_event || 0,
+    transfersOutEvent: p.transfers_out_event || 0,
+    priceChangePercent: parseFloat(p.price_change_percent) || 0,
+    costChangeEvent: p.cost_change_event || 0
   }));
 
   // For a decision-support tool, what matters is the next gameweek you can still
@@ -575,6 +644,7 @@ function renderFrom(source){
   document.getElementById('updatedAt').textContent = source.freshnessText;
 
   buildInsights();
+  buildPlanner();
   applyFiltersAndRender();
   startClock();
   initMyTeam();
@@ -778,6 +848,149 @@ function buildTopPicksByPosition(){
   });
 }
 
+// ---------- Planner: blank/double gameweeks, chip timing, fixture grid ----------
+const PLANNER_HORIZON = 8;
+
+// Per event in the horizon, which teams have 0 fixtures (blank) or 2+ (double).
+function computeBlankDoubles(){
+  const start = state.currentEvent;
+  const results = [];
+  for (let ev = start; ev < start + PLANNER_HORIZON; ev++){
+    const blanks = [], doubles = [];
+    Object.entries(state.teams).forEach(([tid, team]) => {
+      const count = (state.fixturesByTeam[tid]||[]).filter(f => f.event === ev).length;
+      if (count === 0) blanks.push(team.name);
+      else if (count >= 2) doubles.push(team.name);
+    });
+    if (blanks.length || doubles.length) results.push({ event: ev, blanks, doubles });
+  }
+  return results;
+}
+
+function buildBlankDoubleGameweeks(){
+  const rows = computeBlankDoubles();
+  const el = document.getElementById('blankDoubleList');
+  if (!rows.length){
+    el.innerHTML = `<div class="bd-row">No blank or double gameweeks detected in the next ${PLANNER_HORIZON} gameweeks.</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(r => `<div class="bd-row">
+    <span class="bd-gw">GW${r.event}</span>
+    ${r.doubles.length ? `<div style="margin-top:4px;"><span class="bd-tag double">DOUBLE</span>${r.doubles.join(', ')}</div>` : ''}
+    ${r.blanks.length ? `<div style="margin-top:4px;"><span class="bd-tag blank">BLANK</span>${r.blanks.join(', ')}</div>` : ''}
+  </div>`).join('');
+}
+
+function buildChipTiming(){
+  const rows = computeBlankDoubles();
+  const el = document.getElementById('chipTimingList');
+  const cards = [];
+
+  // Bench Boost: best window is whichever gameweek has the most doubling teams —
+  // more of the whole player pool (including bench-fodder types) gets a game.
+  const byDoubleCount = [...rows].sort((a,b)=>b.doubles.length-a.doubles.length);
+  if (byDoubleCount.length && byDoubleCount[0].doubles.length >= 3){
+    const top = byDoubleCount[0];
+    cards.push(`<div class="analysis-card good"><h4>Bench Boost</h4><p><strong>GW${top.event}</strong> has the most doubling clubs in range (${top.doubles.length}: ${top.doubles.join(', ')}) — a reasonable window if your bench lines up with any of them.</p></div>`);
+  }
+
+  // Triple Captain: check if any current top captain pick has a double in range.
+  const available = state.players.filter(p => p.status === 'a');
+  const topCaptains = [...available].sort((a,b)=>captainScore(b)-captainScore(a)).slice(0,10);
+  let tcHit = null;
+  for (const r of rows){
+    const doubling = topCaptains.find(p => r.doubles.includes(state.teams[p.teamId].name));
+    if (doubling){ tcHit = { event: r.event, player: doubling }; break; }
+  }
+  if (tcHit){
+    cards.push(`<div class="analysis-card good"><h4>Triple Captain</h4><p><strong>${tcHit.player.name}</strong> (${state.teams[tcHit.player.teamId].short_name}) has a double gameweek in <strong>GW${tcHit.event}</strong> — worth building toward if they're still in form when it arrives.</p></div>`);
+  }
+
+  if (!cards.length){
+    cards.push(`<div class="analysis-card"><h4>No standout windows</h4><p>Nothing in the next ${PLANNER_HORIZON} gameweeks jumps out for Bench Boost or Triple Captain — worth re-checking as fixtures firm up closer to the time.</p></div>`);
+  }
+  el.innerHTML = cards.join('');
+}
+
+function buildFixtureGrid(){
+  const start = state.currentEvent;
+  const gws = Array.from({length:6}, (_,i) => start+i);
+  const teams = Object.entries(state.teams).sort((a,b)=>a[1].name.localeCompare(b[1].name));
+
+  let html = '<table class="fx-grid-table"><thead><tr><th class="team-cell">Team</th>';
+  gws.forEach(gw => html += `<th>GW${gw}</th>`);
+  html += '</tr></thead><tbody>';
+
+  teams.forEach(([tid, team]) => {
+    html += `<tr><td class="team-cell">${team.short_name}</td>`;
+    gws.forEach(gw => {
+      const fixtures = (state.fixturesByTeam[tid]||[]).filter(f => f.event === gw);
+      if (!fixtures.length){
+        html += `<td><span class="fx-grid-chip" style="background:var(--ink-soft);">-</span></td>`;
+      } else {
+        const chips = fixtures.map(f => {
+          const opp = state.teams[f.opp] ? state.teams[f.opp].short_name : '???';
+          return `<span class="fx-grid-chip" style="background:${diffColor(f.diff)};">${opp}${f.home?'H':'A'}</span>`;
+        }).join(' ');
+        html += `<td>${chips}</td>`;
+      }
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('fixtureGrid').innerHTML = html;
+}
+
+function buildPlanner(){
+  buildFixtureSwings();
+  buildBlankDoubleGameweeks();
+  buildChipTiming();
+  buildFixtureGrid();
+}
+
+// ---------- Set piece takers ----------
+function buildSetPieceTakers(){
+  const el = document.getElementById('setPieceList');
+  const byTeam = {};
+  state.players.forEach(p => {
+    if (p.status !== 'a') return;
+    if (p.penOrder !== 1 && p.fkOrder !== 1 && p.cornerOrder !== 1) return;
+    if (!byTeam[p.teamId]) byTeam[p.teamId] = {};
+    if (p.penOrder === 1) byTeam[p.teamId].pen = p.name;
+    if (p.fkOrder === 1) byTeam[p.teamId].fk = p.name;
+    if (p.cornerOrder === 1) byTeam[p.teamId].corner = p.name;
+  });
+  const rows = Object.entries(byTeam).sort((a,b)=> state.teams[a[0]].name.localeCompare(state.teams[b[0]].name));
+  if (!rows.length){
+    el.innerHTML = `<div class="sp-row">No set-piece data yet — this needs a live refresh (tap the GW badge) to populate.</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(([tid, roles]) => `<div class="sp-row">
+    <span class="sp-team">${state.teams[tid].short_name}</span>
+    <span class="sp-roles">${roles.pen?`Pens: <b>${roles.pen}</b>`:''}${roles.pen&&(roles.fk||roles.corner)?' &middot; ':''}${roles.fk?`FKs: <b>${roles.fk}</b>`:''}${roles.fk&&roles.corner?' &middot; ':''}${roles.corner?`Corners: <b>${roles.corner}</b>`:''}</span>
+  </div>`).join('');
+}
+
+// ---------- Price watch ----------
+function buildPriceWatch(){
+  const available = state.players.filter(p => p.status === 'a');
+  const hasData = available.some(p => p.transfersInEvent || p.transfersOutEvent);
+  const riseEl = document.getElementById('priceRiseList');
+  const fallEl = document.getElementById('priceFallList');
+  if (!hasData){
+    riseEl.innerHTML = `<div class="pick-row">No transfer-momentum data yet — needs a live refresh (tap the GW badge).</div>`;
+    fallEl.innerHTML = '';
+    return;
+  }
+  const withNet = available.map(p => ({ ...p, net: p.transfersInEvent - p.transfersOutEvent }));
+  const rising = [...withNet].sort((a,b)=>b.net-a.net).slice(0,5);
+  const falling = [...withNet].sort((a,b)=>a.net-b.net).slice(0,5);
+
+  const rowHtml = p => `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtMoney(p.cost)}m</div></div><div class="st">${p.net>=0?'+':''}${(p.net/1000).toFixed(0)}k</div></div>`;
+  riseEl.innerHTML = rising.map(rowHtml).join('');
+  fallEl.innerHTML = falling.map(rowHtml).join('');
+}
+
 function buildInsights(){
   const available = state.players.filter(p => p.status === 'a');
 
@@ -799,12 +1012,13 @@ function buildInsights(){
     `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned · form ${p.form.toFixed(1)}</div></div><div class="st">${p.epNext.toFixed(1)}</div></div>`
   ).join('');
 
-  buildFixtureSwings();
-
   const watch = [...state.players].filter(p=>p.status!=='a' && p.selected>=5).sort((a,b)=>b.selected-a.selected).slice(0,5);
   document.getElementById('watchList').innerHTML = watch.length ? watch.map(p=>
     `<div class="pick-row"><div><div class="nm">${p.name}${statusFlag(p)}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned</div></div><div class="st">${p.chance!==null&&p.chance!==undefined?p.chance+'%':'?'}</div></div>`
   ).join('') : '<div class="pick-row"><span class="mt">No major flags among popular picks</span></div>';
+
+  buildSetPieceTakers();
+  buildPriceWatch();
 }
 
 function applyFiltersAndRender(){
