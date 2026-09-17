@@ -143,6 +143,16 @@
   .bd-tag.double{background:var(--easy); color:#fff;}
   .bd-tag.blank{background:var(--hard); color:#fff;}
 
+  /* ---------- My Season tracker ---------- */
+  .season-row{padding:7px 0; border-top:1px solid var(--line); font-size:12.5px; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .season-row:first-child{border-top:none; padding-top:0;}
+  .season-row .sr-gw{font-family:'Barlow Condensed',sans-serif; font-weight:700; color:var(--pitch); width:34px; flex-shrink:0;}
+  .season-row .sr-pts{font-weight:700; width:40px; text-align:right; flex-shrink:0;}
+  .season-row .sr-avg{color:var(--ink-soft); font-size:11px; flex:1;}
+  .season-row .sr-rank{color:var(--ink-soft); font-size:11px; text-align:right; flex-shrink:0;}
+  .chip-used-badge{background:var(--amber); color:#fff; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:4px; font-family:'Barlow Condensed',sans-serif; margin-right:6px;}
+  .news-text{font-size:11px; color:var(--hard); margin-top:2px; line-height:1.4;}
+
   /* ---------- Players tab ---------- */
   .search-row{display:flex; gap:8px; margin-bottom:12px;}
   .search-row input{
@@ -336,6 +346,11 @@
         <div id="captainList"></div>
       </div>
       <div class="pick-card">
+        <h3>Captaincy Traps</h3>
+        <div class="sub">Highly owned, but cold form or a tough fixture — think twice</div>
+        <div id="captainTrapList"></div>
+      </div>
+      <div class="pick-card">
         <h3>Top Picks by Position</h3>
         <div class="sub">Expected points, recent form &amp; upcoming fixtures</div>
         <div style="font-size:11px; font-weight:700; color:var(--gkp); text-transform:uppercase; letter-spacing:.05em; margin:8px 0 4px;">Goalkeepers</div>
@@ -359,8 +374,13 @@
       </div>
       <div class="pick-card">
         <h3>Watch List</h3>
-        <div class="sub">Highly owned, fitness doubt</div>
+        <div class="sub">Highly owned, fitness doubt — with the actual team news</div>
         <div id="watchList"></div>
+      </div>
+      <div class="pick-card">
+        <h3>Rotation Risk</h3>
+        <div class="sub">No injury flag, but well below a full game recently</div>
+        <div id="rotationList"></div>
       </div>
       <div class="pick-card">
         <h3>Set Piece Takers</h3>
@@ -415,6 +435,15 @@
     </section>
 
     <section class="tab-panel" id="myTeamTab">
+      <div class="pick-card" id="benchmarkCard" style="display:none;">
+        <h3>Last Gameweek</h3>
+        <div class="sub" id="benchmarkSub"></div>
+      </div>
+      <div class="pick-card">
+        <h3>My Season</h3>
+        <div class="sub">Rank trend, points vs average, chips used</div>
+        <div id="seasonView"></div>
+      </div>
       <div id="teamView" style="display:none;"></div>
 
       <div id="builderStep1" style="display:none;">
@@ -615,7 +644,9 @@ function transformLiveBootstrap(json){
     transfersInEvent: p.transfers_in_event || 0,
     transfersOutEvent: p.transfers_out_event || 0,
     priceChangePercent: parseFloat(p.price_change_percent) || 0,
-    costChangeEvent: p.cost_change_event || 0
+    costChangeEvent: p.cost_change_event || 0,
+    news: p.news || '',
+    minutes: p.minutes || 0
   }));
 
   // For a decision-support tool, what matters is the next gameweek you can still
@@ -628,7 +659,16 @@ function transformLiveBootstrap(json){
   const cur = events.find(e => e.is_next) || events.find(e => e.is_current);
   if (cur){ currentEvent = cur.id; deadline = new Date(cur.deadline_time); }
 
-  return { teams, players, currentEvent, deadline };
+  // Benchmark from the most recently finished gameweek (for the My Season card).
+  const finished = events.filter(e => e.finished).sort((a,b)=>b.id-a.id);
+  const lastFinished = finished[0];
+  const benchmark = lastFinished ? {
+    event: lastFinished.id,
+    average: lastFinished.average_entry_score,
+    highest: lastFinished.highest_score
+  } : null;
+
+  return { teams, players, currentEvent, deadline, benchmark };
 }
 
 function renderFrom(source){
@@ -640,6 +680,7 @@ function renderFrom(source){
   }));
   state.currentEvent = source.currentEvent;
   state.deadline = source.deadline;
+  state.benchmark = source.benchmark || null;
   document.getElementById('gwBadge').textContent = 'GW ' + source.currentEvent;
   document.getElementById('updatedAt').textContent = source.freshnessText;
 
@@ -686,6 +727,7 @@ async function tryLiveRefresh(manual){
       players: live.players,
       currentEvent: live.currentEvent,
       deadline: live.deadline,
+      benchmark: live.benchmark,
       freshnessText: 'Live data as of ' + new Date().toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'})
     });
     if (badge){
@@ -999,6 +1041,16 @@ function buildInsights(){
     `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${POS_NAME[p.pos]} · form ${p.form.toFixed(1)}</div></div><div class="st">${p.epNext.toFixed(1)}</div></div>`
   ).join('');
 
+  // Inverse of Differentials: the "everyone has them" captain pick that's gone cold.
+  // Cold form is the real signal — a tough fixture alone doesn't make a hot player a
+  // trap, so it's shown as context, not an independent trigger.
+  const traps = [...available].filter(p => p.selected>=15 && p.form<4).sort((a,b)=>b.selected-a.selected).slice(0,5);
+  document.getElementById('captainTrapList').innerHTML = traps.length ? traps.map(p=>{
+    const diff = fixtureAvgDifficulty(p.teamId,1);
+    const why = diff>3.5 ? 'cold form + tough fixture' : 'cold form';
+    return `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned · ${why}</div></div><div class="st">${p.form.toFixed(1)}</div></div>`;
+  }).join('') : '<div class="pick-row"><span class="mt">No obvious traps among highly-owned players right now</span></div>';
+
   buildTopPicksByPosition();
 
   // ppg (not a fixed cumulative-points cutoff) so this stays meaningful in GW1 as much as GW30
@@ -1014,11 +1066,33 @@ function buildInsights(){
 
   const watch = [...state.players].filter(p=>p.status!=='a' && p.selected>=5).sort((a,b)=>b.selected-a.selected).slice(0,5);
   document.getElementById('watchList').innerHTML = watch.length ? watch.map(p=>
-    `<div class="pick-row"><div><div class="nm">${p.name}${statusFlag(p)}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned</div></div><div class="st">${p.chance!==null&&p.chance!==undefined?p.chance+'%':'?'}</div></div>`
+    `<div class="pick-row"><div><div class="nm">${p.name}${statusFlag(p)}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned</div>${p.news?`<div class="news-text">${p.news}</div>`:''}</div><div class="st">${p.chance!==null&&p.chance!==undefined?p.chance+'%':'?'}</div></div>`
   ).join('') : '<div class="pick-row"><span class="mt">No major flags among popular picks</span></div>';
 
+  buildRotationRisk();
   buildSetPieceTakers();
   buildPriceWatch();
+}
+
+// No official injury flag, but minutes well below a full game recently — tactical
+// rotation or a fitness issue that hasn't been formally flagged yet. Live-only:
+// "minutes" isn't in the baked snapshot, so this stays empty until a live refresh.
+function buildRotationRisk(){
+  const el = document.getElementById('rotationList');
+  const hasLiveData = state.players.some(p => p.minutes !== undefined);
+  if (!hasLiveData){
+    el.innerHTML = `<div class="pick-row">No minutes data yet — needs a live refresh (tap the GW badge).</div>`;
+    return;
+  }
+  const gamesPlayed = Math.max(1, state.currentEvent - 1);
+  const risky = state.players.filter(p =>
+    p.status === 'a' && p.minutes > 0 && p.totalPts > 0 && p.selected >= 1 &&
+    (p.minutes / gamesPlayed) < 60
+  ).sort((a,b)=>b.selected-a.selected).slice(0,5);
+  el.innerHTML = risky.length ? risky.map(p => {
+    const avgMins = Math.round(p.minutes / gamesPlayed);
+    return `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned</div></div><div class="st">${avgMins}'</div></div>`;
+  }).join('') : '<div class="pick-row"><span class="mt">No clear rotation risks among relevant players</span></div>';
 }
 
 function applyFiltersAndRender(){
@@ -1118,7 +1192,60 @@ function loadBankFromStorage(){
   }catch(e){ return null; }
 }
 
+function buildBenchmarkCard(){
+  const card = document.getElementById('benchmarkCard');
+  const sub = document.getElementById('benchmarkSub');
+  if (!state.benchmark){
+    card.style.display = 'none';
+    return;
+  }
+  const b = state.benchmark;
+  sub.textContent = `GW${b.event} — average score ${b.average ?? '—'}, highest ${b.highest ?? '—'}.`;
+  card.style.display = 'block';
+}
+
+let seasonFetchState = 'idle'; // idle | loading | done | failed
+async function trySeasonFetch(){
+  if (seasonFetchState === 'loading' || seasonFetchState === 'done') return;
+  seasonFetchState = 'loading';
+  const el = document.getElementById('seasonView');
+  el.innerHTML = '<div class="season-row">Loading season history…</div>';
+  try{
+    const { data } = await fetchJsonViaProxies(`https://fantasy.premierleague.com/api/entry/${TEAM_ID}/history/`);
+    if (!data.current) throw new Error('unexpected response shape');
+    renderSeasonView(data);
+    seasonFetchState = 'done';
+  }catch(e){
+    seasonFetchState = 'failed';
+    el.innerHTML = `<div class="season-row">Couldn't load season history — <button class="reload-link" id="retrySeasonBtn" style="margin:0; display:inline;">retry</button></div>`;
+    const btn = document.getElementById('retrySeasonBtn');
+    if (btn) btn.addEventListener('click', () => { seasonFetchState = 'idle'; trySeasonFetch(); });
+  }
+}
+
+function renderSeasonView(data){
+  const el = document.getElementById('seasonView');
+  const current = data.current || [];
+  const chips = data.chips || [];
+  let html = '';
+  if (chips.length){
+    html += `<div style="margin-bottom:10px;">${chips.map(c=>`<span class="chip-used-badge">${c.name} · GW${c.event}</span>`).join('')}</div>`;
+  }
+  if (!current.length){
+    html += '<div class="season-row">No gameweeks played yet this season.</div>';
+  } else {
+    html += [...current].reverse().map(gw => `<div class="season-row">
+      <span class="sr-gw">GW${gw.event}</span>
+      <span class="sr-pts">${gw.points}</span>
+      <span class="sr-avg">bench ${gw.points_on_bench} &middot; ${gw.event_transfers} transfer${gw.event_transfers===1?'':'s'}${gw.event_transfers_cost?` (&minus;${gw.event_transfers_cost})`:''}</span>
+      <span class="sr-rank">OR ${gw.overall_rank ? gw.overall_rank.toLocaleString() : '—'}</span>
+    </div>`).join('');
+  }
+  el.innerHTML = html;
+}
+
 function initMyTeam(){
+  buildBenchmarkCard();
   try{
     if (!localStorage.getItem('fpl_squad_reset_v2')){
       saveSquadToStorage(MY_TEAM_PICKS);
@@ -1138,6 +1265,7 @@ function initMyTeam(){
   } else {
     openBuilder([]);
   }
+  trySeasonFetch();
 }
 
 // ---------- Squad builder: step 1, pick 15 players ----------
@@ -1368,7 +1496,7 @@ function renderMyTeam(){
   // Flagged players in squad
   const flagged = squad.filter(p => p.player.status !== 'a');
   if (flagged.length){
-    html += `<div class="analysis-card warn"><h4>Fitness flags</h4><p>${flagged.map(p => `<strong>${p.player.name}</strong> (${p.position<=11?'starting':'bench'}, ${p.player.chance!==null?p.player.chance+'% chance':'status: '+p.player.status})`).join(', ')}.</p></div>`;
+    html += `<div class="analysis-card warn"><h4>Fitness flags</h4><p>${flagged.map(p => `<strong>${p.player.name}</strong> (${p.position<=11?'starting':'bench'}, ${p.player.chance!==null?p.player.chance+'% chance':'status: '+p.player.status})${p.player.news?' — '+p.player.news:''}`).join('<br>')}.</p></div>`;
   } else {
     html += `<div class="analysis-card good"><h4>Fitness flags</h4><p>No injury or suspension doubts in your 15.</p></div>`;
   }
