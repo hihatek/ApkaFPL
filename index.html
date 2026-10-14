@@ -937,7 +937,7 @@ function buildTransferTips(squad, bankTenths){
 // fixture ease, rather than raw form alone (a good player with brutal fixtures next
 // isn't actually the differential you want).
 function differentialScore(p){
-  return Math.min(p.form,10)*0.3 + projectedPerMatch(p,4);
+  return projectedPerMatch(p,4);
 }
 
 function buildFixtureSwings(){
