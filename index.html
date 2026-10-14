@@ -342,7 +342,7 @@
     <section class="tab-panel active" id="picksTab">
       <div class="pick-card">
         <h3>Captain Picks</h3>
-        <div class="sub">Top expected points, next GW</div>
+        <div class="sub">Projected points this GW: xG/xA, opponent, fitness</div>
         <div id="captainList"></div>
       </div>
       <div class="pick-card">
@@ -567,28 +567,70 @@ function fixtureAvgDifficulty(teamId, n){
   if (!fx.length) return 3;
   return fx.reduce((sum,f)=>sum+f.diff,0) / fx.length;
 }
-// Higher = better transfer target: rewards expected points, rewards an easier upcoming run
-function transferScore(p){
-  return p.epNext - (fixtureAvgDifficulty(p.teamId,4) - 3) * 0.4;
+// ---- Forward-looking projection engine ---------------------------------------------
+// FPL's own ep_next is (right now) just recent form x chance of playing, so it says nothing
+// about the opponent or about underlying attacking output. Instead we project points per
+// match from: season xG/xA per 90 (what a player *should* score), clean-sheet odds, the
+// actual opponent (difficulty + home/away), and then blend with real points-per-game and
+// capped recent form so proven output still counts. Fitness is a probability discount,
+// not an on/off filter — a 75% Haaland still outranks a 100% mid-table winger.
+const GOAL_PTS = {1: 6, 2: 6, 3: 5, 4: 4};
+const CS_PTS   = {1: 4, 2: 4, 3: 1, 4: 0};
+function availabilityFactor(p){
+  if (p.chance !== null && p.chance !== undefined) return Math.max(0, Math.min(1, p.chance/100));
+  if (p.status === 'a') return 1;
+  if (p.status === 'd') return 0.75;
+  return 0;
 }
-// For captaincy: FPL's own epNext model can lag a hot run of form, so give recent form a
-// nudge here — capped, so one fluke big-haul game can't swamp a proven high-EP option —
-// and look only at the very next fixture (captaincy is a one-gameweek call, not a hold).
-// Positional weight: a defender's points are capped by clean-sheet + defensive contribution
-// rules even on a great day, while a forward's ceiling is much higher — real captaincy calls
-// weigh that. This is multiplicative (not a flat offset) so it still matters even when a
-// defender's own ep_next has been pulled unusually high by one big haul, not just when
-// scores are already close.
-const CAPTAIN_POS_WEIGHT = {1: 0.72, 2: 0.75, 3: 1.0, 4: 1.08};
-function captainScore(p){
-  const base = p.epNext + Math.min(p.form,8)*0.15 - (fixtureAvgDifficulty(p.teamId,1) - 3) * 0.2;
-  return base * CAPTAIN_POS_WEIGHT[p.pos];
+// Share of recent minutes the player actually plays (rotation / sub risk). 1 when unknown.
+function minutesFactor(p){
+  const games = (state.currentEvent||1) - 1;
+  if (games < 2 || p.minutes === undefined) return 1;
+  const r = p.minutes / (games*90);
+  return Math.max(0.2, Math.min(1, r/0.85));
 }
-// For Top Picks by Position: like transferScore, but also factors in recent form
-// (capped, same reasoning as captainScore) — a player on a real cold streak shouldn't
-// out-rank a hot one just because their fixtures are marginally kinder.
-function topPickScore(p){
-  return p.epNext + Math.min(p.form,8)*0.2 - (fixtureAvgDifficulty(p.teamId,4) - 3) * 0.4;
+function fixtureMult(f){
+  return 1 + (3 - f.diff)*0.10 + (f.home ? 0.07 : -0.03);
+}
+// Expected points for one match against fixture f
+function projectMatch(p, f){
+  const mult = fixtureMult(f);
+  const form = Math.min(p.form, 10);
+  const hasModel = p.xg90 !== undefined && p.xg90 !== null;
+  if (!hasModel) return (0.6*p.ppg + 0.4*form) * mult;
+  const csProb = Math.max(0.08, Math.min(0.6, 0.30 + (3 - f.diff)*0.08 + (f.home ? 0.04 : 0)));
+  const attack = (p.xg90*GOAL_PTS[p.pos] + p.xa90*3) * mult;
+  const model = attack + 2 + CS_PTS[p.pos]*csProb + (p.pos===1 ? 1.5 : 0) + (p.penOrder===1 ? 0.2 : 0);
+  return 0.55*model + 0.30*p.ppg*mult + 0.15*form*mult;
+}
+function fixturesInGw(teamId){
+  return (state.fixturesByTeam[teamId]||[]).filter(f => f.event === state.currentEvent);
+}
+// Projected points for this gameweek (handles blanks = 0, doubles = two matches)
+function projectedGw(p){
+  const fx = fixturesInGw(p.teamId);
+  if (!fx.length) return 0;
+  const perMatch = fx.reduce((sum,f)=>sum+projectMatch(p,f),0);
+  return perMatch * availabilityFactor(p) * minutesFactor(p);
+}
+// Projected points per match over the next n fixtures (for multi-week picks / transfers)
+function projectedPerMatch(p, n){
+  const fx = (state.fixturesByTeam[p.teamId]||[]).filter(f => f.event >= state.currentEvent).slice(0, n||4);
+  if (!fx.length) return 0;
+  const avg = fx.reduce((sum,f)=>sum+projectMatch(p,f),0) / fx.length;
+  return avg * availabilityFactor(p) * minutesFactor(p);
+}
+// Higher = better transfer target
+function transferScore(p){ return projectedPerMatch(p,4); }
+// Captaincy is a one-gameweek call. Haul ceiling matters, so a mild positional weight
+// (forwards/mids can return 12+; a defender's clean-sheet points are capped).
+const CAPTAIN_POS_WEIGHT = {1: 0.70, 2: 0.80, 3: 1.0, 4: 1.05};
+function captainScore(p){ return projectedGw(p) * CAPTAIN_POS_WEIGHT[p.pos]; }
+function topPickScore(p){ return projectedPerMatch(p,4); }
+// Players who could realistically play: fit or doubtful, and not a long-term absentee
+function playablePool(){
+  return state.players.filter(p => (p.status === 'a' || p.status === 'd') &&
+    (p.minutes === undefined || p.minutes > 0 || (state.currentEvent||1) <= 2));
 }
 const BOOTSTRAP_URL = 'https://fantasy.premierleague.com/api/bootstrap-static/';
 
@@ -646,7 +688,12 @@ function transformLiveBootstrap(json){
     priceChangePercent: parseFloat(p.price_change_percent) || 0,
     costChangeEvent: p.cost_change_event || 0,
     news: p.news || '',
-    minutes: p.minutes || 0
+    minutes: p.minutes || 0,
+    xg90: (p.expected_goals_per_90===undefined) ? undefined : (parseFloat(p.expected_goals_per_90)||0),
+    xa90: (p.expected_assists_per_90===undefined) ? undefined : (parseFloat(p.expected_assists_per_90)||0),
+    xgi90: parseFloat(p.expected_goal_involvements_per_90) || 0,
+    startsPer90: parseFloat(p.starts_per_90) || 0,
+    chanceThis: (p.chance_of_playing_this_round===undefined) ? null : p.chance_of_playing_this_round
   }));
 
   // For a decision-support tool, what matters is the next gameweek you can still
@@ -865,7 +912,7 @@ function buildTransferTips(squad, bankTenths){
 // fixture ease, rather than raw form alone (a good player with brutal fixtures next
 // isn't actually the differential you want).
 function differentialScore(p){
-  return p.form*0.5 + p.epNext - (fixtureAvgDifficulty(p.teamId,4) - 3) * 0.4;
+  return Math.min(p.form,10)*0.3 + projectedPerMatch(p,4);
 }
 
 function buildFixtureSwings(){
@@ -937,8 +984,7 @@ function buildChipTiming(){
   }
 
   // Triple Captain: check if any current top captain pick has a double in range.
-  const available = state.players.filter(p => p.status === 'a');
-  const topCaptains = [...available].sort((a,b)=>captainScore(b)-captainScore(a)).slice(0,10);
+  const topCaptains = [...playablePool()].sort((a,b)=>captainScore(b)-captainScore(a)).slice(0,10);
   let tcHit = null;
   for (const r of rows){
     const doubling = topCaptains.find(p => r.doubles.includes(state.teams[p.teamId].name));
@@ -1036,10 +1082,13 @@ function buildPriceWatch(){
 function buildInsights(){
   const available = state.players.filter(p => p.status === 'a');
 
-  const captains = [...available].sort((a,b)=>captainScore(b)-captainScore(a)).slice(0,5);
-  document.getElementById('captainList').innerHTML = captains.map(p=>
-    `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${POS_NAME[p.pos]} · form ${p.form.toFixed(1)}</div></div><div class="st">${p.epNext.toFixed(1)}</div></div>`
-  ).join('');
+  const captains = [...playablePool()].sort((a,b)=>captainScore(b)-captainScore(a)).slice(0,5);
+  document.getElementById('captainList').innerHTML = captains.map(p=>{
+    const fx = fixturesInGw(p.teamId);
+    const opp = fx.length ? fx.map(f=>(state.teams[f.opp]?state.teams[f.opp].short_name:'?')+' ('+(f.home?'H':'A')+')').join(' + ') : 'blank';
+    const fit = availabilityFactor(p) < 1 ? ' · ' + Math.round(availabilityFactor(p)*100) + '% fit' : '';
+    return `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} vs ${opp} · form ${p.form.toFixed(1)}${fit}</div></div><div class="st">${captainScore(p).toFixed(1)}</div></div>`;
+  }).join('');
 
   // Inverse of Differentials: the "everyone has them" captain pick that's gone cold.
   // Cold form is the real signal — a tough fixture alone doesn't make a hot player a
