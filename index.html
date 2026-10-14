@@ -352,7 +352,7 @@
       </div>
       <div class="pick-card">
         <h3>Top Picks by Position</h3>
-        <div class="sub">Expected points, recent form &amp; upcoming fixtures</div>
+        <div class="sub">Projected points per match, next 4 fixtures</div>
         <div style="font-size:11px; font-weight:700; color:var(--gkp); text-transform:uppercase; letter-spacing:.05em; margin:8px 0 4px;">Goalkeepers</div>
         <div id="topGkpList"></div>
         <div style="font-size:11px; font-weight:700; color:var(--def); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 4px;">Defenders</div>
@@ -369,7 +369,7 @@
       </div>
       <div class="pick-card">
         <h3>Differentials</h3>
-        <div class="sub">&lt;10% owned, ranked by form &amp; fixtures</div>
+        <div class="sub">&lt;10% owned, ranked by projected points</div>
         <div id="diffList"></div>
       </div>
       <div class="pick-card">
@@ -952,8 +952,11 @@ function buildFixtureSwings(){
 }
 
 function buildTopPicksByPosition(){
-  const available = state.players.filter(p => p.status === 'a');
-  const rowHtml = p => `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtMoney(p.cost)}m · form ${p.form.toFixed(1)}</div></div><div class="st">${p.epNext.toFixed(1)}</div></div>`;
+  const available = playablePool();
+  const rowHtml = p => {
+    const fit = availabilityFactor(p) < 1 ? ' · ' + Math.round(availabilityFactor(p)*100) + '% fit' : '';
+    return `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtMoney(p.cost)}m · form ${p.form.toFixed(1)}${fit}</div></div><div class="st">${topPickScore(p).toFixed(1)}</div></div>`;
+  };
 
   const targets = [[1,'topGkpList'], [2,'topDefList'], [3,'topMidList'], [4,'topFwdList']];
   targets.forEach(([posNum, elId]) => {
@@ -1135,7 +1138,7 @@ function buildInsights(){
 
   const diffs = [...available].filter(p=>p.selected<10).sort((a,b)=>differentialScore(b)-differentialScore(a)).slice(0,5);
   document.getElementById('diffList').innerHTML = diffs.map(p=>
-    `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned · form ${p.form.toFixed(1)}</div></div><div class="st">${p.epNext.toFixed(1)}</div></div>`
+    `<div class="pick-row"><div><div class="nm">${p.name}</div><div class="mt">${state.teams[p.teamId].short_name} · ${fmtPct(p.selected)} owned · form ${p.form.toFixed(1)}</div></div><div class="st">${projectedPerMatch(p,4).toFixed(1)}</div></div>`
   ).join('');
 
   const watch = [...state.players].filter(p=>p.status!=='a' && p.selected>=5).sort((a,b)=>b.selected-a.selected).slice(0,5);
